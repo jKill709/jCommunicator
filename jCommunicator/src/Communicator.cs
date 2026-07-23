@@ -1,13 +1,22 @@
-﻿using Renci.SshNet;
+﻿using mLogger;
+using Renci.SshNet;
 using Renci.SshNet.Messages.Connection;
-
-using mLogger;
+using System.Drawing;
 
 namespace jCommunicator
 { 
 //
 // Manages and SSH connection to a Cluster Hub, and tunnels to individual Nodes for file operations and command execution.
-
+    
+    public enum ServiceStatus
+    {
+        Active = 0,
+        Inactive = 1,
+        Failed = 2,
+        Activative = 3,
+        Deactivating = 4,
+        Error = 5
+    }
     public class Communicator : IDisposable
     {
         private class NodeInfo
