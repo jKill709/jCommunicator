@@ -174,7 +174,7 @@ namespace jCommunicator
                 return new SSHCheckResult(false, ex, sw.ElapsedMilliseconds);
             }
         }
-        public bool AddNodeSFTP(string nodeHost, string nodeUsername, bool verbose = true)
+        public int AddNodeSFTP(string nodeHost, string nodeUsername, bool verbose = true)
         {
             if (!IsConnected)
             {
@@ -187,7 +187,7 @@ namespace jCommunicator
             }
 
             if (_nodeConnections.ContainsKey(nodeHost))
-                return true; // Already initialized
+                return _nodeConnections[nodeHost].LocalPort; // Already initialized
 
             try
             {
@@ -214,12 +214,12 @@ namespace jCommunicator
                 };
 
                 if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Initialized SFTP tunnel for {nodeHost}");
-                return true;
+                return localPort;
             }
             catch (Exception ex)
             {
                 logger.Log(LogLevel.ERROR, "Communicator", $"Failed to initialize Node SFTP for {nodeHost}: {ex.Message}");
-                return false;
+                return 0;
             }
         }
         private void RebuildNodeTunnels(bool verbose = false)
