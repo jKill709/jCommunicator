@@ -2,6 +2,7 @@
 using Renci.SshNet;
 using Renci.SshNet.Messages.Connection;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 
 namespace jCommunicator
 { 
@@ -13,9 +14,22 @@ namespace jCommunicator
         Active = 0,
         Inactive = 1,
         Failed = 2,
-        Activative = 3,
+        Activating = 3,
         Deactivating = 4,
         Error = 5
+    }
+    public readonly struct SSHCheckResult
+    {
+        public bool Success { get; }
+        public Exception? Exception { get; }
+        public long checkTimespan { get; }
+
+        public SSHCheckResult(bool success, Exception? exception, long checkTime)
+        {
+            Success = success;
+            Exception = exception;
+            checkTimespan = checkTime;
+        }
     }
     public class Communicator : IDisposable
     {
@@ -47,14 +61,17 @@ namespace jCommunicator
         //Constructor/Destructor
         public Communicator(string host, string username, string password) //, RichTextBox outputBox = null, Action<string> logAction = null)
         {
+            logger.AddSource("Communicator");
+            logger.LogHeading(LogLevel.INFO, "Communicator", $"Starting Communicator for {host}");
+
             _host = host;
             _username = username;
             _password = password;
-            //_outputBox = outputBox;
-            //_logAction = logAction;
         }
         public void Dispose()
         {
+
+            logger.LogHeading(LogLevel.INFO, "Communicator", $"Closing Communicator for {_host}");
             Disconnect();
         }
 
@@ -124,7 +141,39 @@ namespace jCommunicator
                 _sshClient = null;
             }
         }
+        public SSHCheckResult checkSSHDevice(bool verbose)
+        {
+            SSHCheckResult returnValue = new SSHCheckResult();
+            bool allConnected = true;
 
+            //foreach (var (device, communicator) in Settings.All.Hubs.Zip(hubs, (d, c) => (d, c)))
+            //{
+            
+            if (verbose)
+                logger.Log(LogLevel.INFO, "Communicator", $"Checking SSH connection to device {_host} as {_username}...\n");
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
+            try
+            {
+                bool connected = Connect();
+                sw.Stop(); 
+                
+                if (verbose)
+                    logger.Log(LogLevel.INFO, "Communicator", $"Total connection attempt time for {_host}: {sw.ElapsedMilliseconds} ms.\n");
+
+                return new SSHCheckResult(connected, null, sw.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+
+                if (verbose)
+                    logger.Log(LogLevel.INFO, "Communicator", $"Total connection attempt time for {_host}: {sw.ElapsedMilliseconds} ms.\n");
+
+                return new SSHCheckResult(false, ex, sw.ElapsedMilliseconds);
+            }
+        }
         public bool AddNodeSFTP(string nodeHost, string nodeUsername, bool verbose = true)
         {
             if (!IsConnected)
@@ -247,6 +296,14 @@ namespace jCommunicator
             DateTime lastModified = DateTimeOffset.FromUnixTimeSeconds(epochSeconds).LocalDateTime;
 
             return lastModified;
+        }
+        public string[] GetListOfHubFiles(string directory, string fileExtension)
+        {
+            // Ask remote system for a list of .log files
+            string cmd = $"ls -1 {directory}*.{fileExtension} 2>/dev/null";
+            string result = ExecuteHubCommand(cmd);
+
+            return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public bool DeleteHubFile(string hubFilePath, bool verbose = true)
@@ -371,6 +428,14 @@ namespace jCommunicator
                 return null;
             }
         }
+        public string[] GetListOfNodeFiles(string directory, string fileExtension, string host, string username)
+        {
+            // Ask remote system for a list of .log files
+            string cmd = $"ls -1 {directory}*.{fileExtension} 2>/dev/null";
+            string result = ExecuteNodeCommand(cmd, host, username);
+
+            return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        }
         public bool DeleteNodeFile(string nodeFilePath, string host, bool verbose = false)
         {
             if (!_nodeConnections.TryGetValue(host, out var node))
@@ -440,7 +505,6 @@ namespace jCommunicator
                 return false;
             }
         }
-
 
         //Command Methods
         public bool PingNode(string host, bool verbose = false)
