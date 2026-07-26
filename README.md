@@ -11,11 +11,30 @@ Built upon the Renci.SshNet library, it abstracts away the complexities of SSH t
 ## Intended Pysical Architecture
 
 ```mermaid
-graph LR
-    A[Desktop PC] -->|SSH/SCP| B(Raspberry Pi Hub)
-    B <-->|"Private AP"| C(Raspberry Pi Node A)
-    B <-->|"Private AP"| D(Raspberry Pi Node B)
-    B <-->|"Private AP"| E(Raspberry Pi Node C)
+flowchart TD
+
+    %% Network Segments
+    subgraph Home["Shared / Home Wi-Fi"]
+        PC["Desktop PC"]
+        HUB["Hub Raspberry Pi"]
+    end
+
+    subgraph Private["Private Wi-Fi (AP hosted by Hub)"]
+        N1["Node 1"]
+        N2["Node 2"]
+        NN["Node n"]
+    end
+
+    %% Connections
+    PC <-->|SSH / SCP| HUB
+
+    HUB -->|"Private AP"| N1
+    HUB -->|"Private AP"| N2
+    HUB -->|"..."| NN
+
+    NOTE["Nodes are isolated from the Home Wi-Fi and are only reachable through the Hub."]
+
+    Private -.-> NOTE
 ```
 
 The desktop application communicates directly with the Hub over SSH. The Hub acts as the gateway to the Nodes, allowing secure command execution and file transfers without exposing the Nodes to the external network.
@@ -112,6 +131,53 @@ Utility methods for health checks.
 | :--- | :--- | :--- |
 | **`checkSSHDevice(bool verbose)`** | Attempts to connect to the Hub and returns a structured result (Success, Exception, Time). | `verbose` |
 | **`PingNode(string host, bool verbose)`** | Pings a node via the Hub. Returns `true` if reachable. | `host` |
+
+## Protocol Schema
+
+```mermaid
+flowchart LR
+
+    C["Communicator"]
+
+    subgraph Hub["Hub Raspberry Pi"]
+        SSH["SSH Session"]
+
+        HCMD["Execute Hub Commands
+• Any shell command
+• Move files
+• Delete files"]
+
+        SCP["File Transfer
+• Upload (PC → Hub)
+• Download (Hub → PC)
+• New ScpClient per transfer"]
+
+        SSH --> HCMD
+        SSH --> SCP
+    end
+
+    subgraph Nodes["Raspberry Pi Nodes"]
+
+        TUNNEL["SSH Port Forward
+Desktop ⇄ Hub ⇄ Node"]
+
+        NCMD["Execute Node Commands
+• Via existing Hub SSH session
+• Move files
+• Delete files"]
+
+        SFTP["File Transfer
+• Upload
+• Download
+• Persistent SFTP connection"]
+
+        TUNNEL --> NCMD
+        TUNNEL --> SFTP
+    end
+
+    C --> SSH
+    C --> TUNNEL
+```
 
 ---
 

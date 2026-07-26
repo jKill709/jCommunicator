@@ -371,6 +371,7 @@ namespace jCommunicator
             }
         }
 
+
         //Node File Methods
         public bool NodeFileExists(string nodeFilePath, string host, bool verbose = false)
         {
@@ -428,6 +429,7 @@ namespace jCommunicator
 
             return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         }
+
         public bool DeleteNodeFile(string nodeFilePath, string host, bool verbose = false)
         {
             if (!_nodeConnections.TryGetValue(host, out var node))
@@ -498,6 +500,7 @@ namespace jCommunicator
             }
         }
 
+
         //Command Methods
         public bool PingNode(string host, bool verbose = false)
         {
@@ -566,11 +569,11 @@ namespace jCommunicator
             string escapedCmd = cmd.Replace("\"", "\\\"");
 
             // Build SSH command that runs on the Hub to connect to the Node
-            //string nodeCommand = $"ssh -tt {username}@{host} \"{cmd}\"";
             string nodeCommand = $"ssh -o BatchMode=yes {username}@{host} \"{escapedCmd}\"";
             if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"{username}: Executing via SSH-> {cmd}");
             return ExecuteHubCommand(nodeCommand, verbose);
         }
+
 
         //File Transfer Methods
         public bool CopyHubToNode(string hubFilePath, string nodeFilePath, string host, string username, bool verbose = false)
@@ -786,6 +789,7 @@ namespace jCommunicator
                 return false;
             }
         }
+
 
         //testMethod
         public void testFileMethods(string PCfilePath, string host, string username)
