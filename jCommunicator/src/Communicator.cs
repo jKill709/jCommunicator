@@ -79,45 +79,26 @@ namespace jCommunicator
         public bool Connect()
         {
             bool lockTaken = false;
-            try
+            Monitor.TryEnter(_lock, TimeSpan.FromSeconds(2), ref lockTaken);
+            if (!lockTaken)
             {
-                Monitor.TryEnter(_lock, TimeSpan.FromSeconds(2), ref lockTaken);
-                if (!lockTaken)
-                {
-                    logger.Log(LogLevel.WARN, "Communicator", "Could not acquire connection lock");
-                    return false;
-                }
-                lock (_lock)
-                {
-                    if (IsConnected) return true;
-
-                    // Initialize SSH client and node tunnels
-                    _sshClient = new SshClient(_host, _username, _password);
-                    try
-                    {
-                        logger.Log(LogLevel.INFO, "Communicator", $"Connecting to Cluster Hub at {_username}@{_host}. Please wait...");
-                        _sshClient.Connect();
-                        RebuildNodeTunnels();
-                        logger.Log(LogLevel.INFO, "Communicator", $"Connected to {_host}");
-
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Log(LogLevel.ERROR, "Communicator", $"Connection error: {ex.Message}");
-                        logger.Log(LogLevel.INFO, "Communicator", $"Could not connect to {_username}@{_host}.");
-                        _sshClient = null;
-
-                        return false;
-                    }
-                }
-
+                logger.Log(LogLevel.WARN, "Communicator", "Could not acquire connection lock");
+                return false;
             }
-            finally
+            lock (_lock)
             {
-                if (lockTaken) Monitor.Exit(_lock);
-            }
+                if (IsConnected) return true;
 
+                // Initialize SSH client and node tunnels
+                _sshClient = new SshClient(_host, _username, _password);
+
+                logger.Log(LogLevel.INFO, "Communicator", $"Connecting to Cluster Hub at {_username}@{_host}. Please wait...");
+                _sshClient.Connect();
+                RebuildNodeTunnels();
+                logger.Log(LogLevel.INFO, "Communicator", $"Connected to {_host}");
+
+                return true;
+            }
         }
         public void Disconnect()
         {
@@ -125,11 +106,17 @@ namespace jCommunicator
             {
                 foreach (NodeInfo node in _nodeConnections.Values)
                 {
-                    if (node.Sftp.IsConnected) node.Sftp.Disconnect();
-                    node.Sftp.Dispose();
-                    node.Port.Stop();
+                    if (node.Sftp != null)
+                    {
+                        if (node.Sftp.IsConnected)
+                            node.Sftp.Disconnect();
+
+                        node.Sftp.Dispose();
+                        node.Port.Stop();
+                        node.Sftp = null;
+                    }
                 }
-                _nodeConnections.Clear();
+                //_nodeConnections.Clear();
 
                 if (_sshClient != null && _sshClient.IsConnected)
                 {
@@ -176,6 +163,11 @@ namespace jCommunicator
         }
         public int AddNodeSFTP(string nodeHost, string nodeUsername, bool verbose = true)
         {
+            if (nodeHost == null || nodeHost == "")
+                throw new ArgumentNullException("nodeHost passed as null");
+            if (nodeUsername == null || nodeUsername == "")
+                throw new ArgumentNullException("nodeUsername passed as null");
+
             if (!IsConnected)
             {
                 Connect();

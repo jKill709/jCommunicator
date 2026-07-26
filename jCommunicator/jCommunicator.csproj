@@ -15,5 +15,4 @@
       <HintPath>..\..\mLogger\mLogger\bin\Debug\net8.0\mLogger.dll</HintPath>
     </Reference>
   </ItemGroup>
-
 </Project>
