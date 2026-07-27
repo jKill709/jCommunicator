@@ -276,18 +276,20 @@ namespace jCommunicator
             string escapedPath = pathVariable.Replace("\"", "\\\"");
             string command = $"stat -c %Y \"{escapedPath}\""; // %Y = epoch time (seconds since 1970-01-01)
 
-            string result = ExecuteHubCommand(command);
+            try
+            {
+                string result = ExecuteHubCommand(command);
 
-            if (string.IsNullOrWhiteSpace(result))
-                throw new FileNotFoundException($"No result returned for path: {pathVariable}");
+                if (!long.TryParse(result.Trim(), out long epochSeconds))
+                    throw new FormatException($"Unexpected response from stat command: '{result}'");
 
-            if (!long.TryParse(result.Trim(), out long epochSeconds))
-                throw new FormatException($"Unexpected response from stat command: '{result}'");
-
-            // Convert from Unix epoch seconds to local DateTime
-            DateTime lastModified = DateTimeOffset.FromUnixTimeSeconds(epochSeconds).LocalDateTime;
-
-            return lastModified;
+                // Convert from Unix epoch seconds to local DateTime
+                return DateTimeOffset.FromUnixTimeSeconds(epochSeconds).LocalDateTime;
+            }
+            catch (FileNotFoundException ex)
+            {
+                return DateTime.MinValue;
+            }
         }
         public string[] GetListOfHubFiles(string directory, string fileExtension)
         {
@@ -305,7 +307,7 @@ namespace jCommunicator
                 // Check if file exists before deletion
                 if (!HubFileExists(hubFilePath, false))
                 {
-                    logger.Log(LogLevel.WARN, "Communicator", $"File not found before deletion: {hubFilePath}");
+                    if (verbose) logger.Log(LogLevel.WARN, "Communicator", $"File not found before deletion: {hubFilePath}");
                     return false;
                 }
 
@@ -315,7 +317,7 @@ namespace jCommunicator
                 // Verify deletion
                 if (!HubFileExists(hubFilePath, false))
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", $"Successfully deleted {hubFilePath}");
+                    if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Successfully deleted {hubFilePath}");
                     return true;
                 }
                 else
@@ -552,7 +554,7 @@ namespace jCommunicator
                 if (!string.IsNullOrEmpty(cmd.Error))
                 {
                     logger.Log(LogLevel.ERROR, "Communicator", $"SSH Error: {cmd.Error}");
-                    throw new Exception($"SSH Error: {cmd.Error}");
+                    throw new FileNotFoundException($"SSH Error: {cmd.Error}");
                 }
 
                 if (verbose && !string.IsNullOrWhiteSpace(result))
@@ -573,7 +575,6 @@ namespace jCommunicator
             if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"{username}: Executing via SSH-> {cmd}");
             return ExecuteHubCommand(nodeCommand, verbose);
         }
-
 
         //File Transfer Methods
         public bool CopyHubToNode(string hubFilePath, string nodeFilePath, string host, string username, bool verbose = false)
@@ -792,10 +793,25 @@ namespace jCommunicator
 
 
         //testMethod
-        public void testFileMethods(string PCfilePath, string host, string username)
+        public void testFileMethods(string PCfilePath) //, string host, string username)
         {
+            logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "Starting Self-Test");
             try
             {
+                if (!IsConnected)
+                {
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", "Cluster Not conntected");
+                    return;
+                }
+                if (!_nodeConnections.First().Value.Sftp.IsConnected)
+                {
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", $"{_nodeConnections.First().Value.Username} sftp session not connected");
+                    return;
+                }
+
+                string host = _nodeConnections.First().Value.Host;
+                string username = _nodeConnections.First().Value.Username;
+
                 string hubFilePath = $"/tmp/{Path.GetFileName(PCfilePath)}";
                 string nodeHubFilePath = $"/tmp/fromHub{Path.GetFileName(PCfilePath)}";
                 string pcHubCopyBackPath = PCfilePath.Substring(0, PCfilePath.Length - 4) + "_HubCopyback.txt";
@@ -805,90 +821,90 @@ namespace jCommunicator
 
                 if (HubFileExists(hubFilePath))
                 {
-                    logger.Log(LogLevel.DEBUG, "Communicator", $"Deleting hub file {hubFilePath} before test.");
+                    logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", $"Deleting hub file {hubFilePath} before test.");
                     DeleteHubFile(hubFilePath);
                 }
-                if (NodeFileExists(nodeHubFilePath, host))//, username))
+                if (NodeFileExists(nodeHubFilePath, host))
                 {
-                    logger.Log(LogLevel.DEBUG, "Communicator", $"Deleting node file {nodeHubFilePath} before test.");
-                    DeleteNodeFile(nodeHubFilePath, host);//, username);
+                    logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", $"Deleting node file {nodeHubFilePath} before test.");
+                    DeleteNodeFile(nodeHubFilePath, host);
                 }
-                if (NodeFileExists(nodePCFilePath, host))//, username))
+                if (NodeFileExists(nodePCFilePath, host))
                 {
-                    logger.Log(LogLevel.DEBUG, "Communicator", $"Deleting node file {nodePCFilePath} before test.");
-                    DeleteNodeFile(nodePCFilePath, host);//, username);
+                    logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", $"Deleting node file {nodePCFilePath} before test.");
+                    DeleteNodeFile(nodePCFilePath, host);
                 }
                 if (File.Exists(pcHubCopyBackPath))
                 {
-                    logger.Log(LogLevel.DEBUG, "Communicator", $"Deleting PC file {pcHubCopyBackPath} before test.");
+                    logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", $"Deleting PC file {pcHubCopyBackPath} before test.");
                     File.Delete(pcHubCopyBackPath);
                 }
                 if (File.Exists(pcNodeCopyBackPath))
                 {
-                    logger.Log(LogLevel.DEBUG, "Communicator", $"Deleting PC file {pcNodeCopyBackPath} before test.");
+                    logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", $"Deleting PC file {pcNodeCopyBackPath} before test.");
                     File.Delete(pcNodeCopyBackPath);
                 }
                 // Copy PC to Hub
-                logger.Log(LogLevel.DEBUG, "Communicator", "Starting test:");
-                logger.Log(LogLevel.DEBUG, "Communicator", "   Copy PC to Hub");
+                logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "Starting test:");
+                logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "   Copy PC to Hub");
                 CopyPCtoHub(PCfilePath, hubFilePath);
                 if (HubFileExists(hubFilePath))
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", "       Success");
+                    logger.Log(LogLevel.INFO, "Communicator_selfTestMethod", "       Success");
                 }
                 else
                 {
-                    logger.Log(LogLevel.ERROR, "Communicator", "       Fail");
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", "       Fail");
                     return;
                 }
 
                 // Copy Hub to Node
-                logger.Log(LogLevel.DEBUG, "Communicator", "   Copy Hub to Node");
+                logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "   Copy Hub to Node");
                 CopyHubToNode(hubFilePath, nodeHubFilePath, host, username);
-                if (NodeFileExists(nodeHubFilePath, host))//, username))
+                if (NodeFileExists(nodeHubFilePath, host))
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", "       Success");
+                    logger.Log(LogLevel.INFO, "Communicator_selfTestMethod", "       Success");
                 }
                 else
                 {
-                    logger.Log(LogLevel.ERROR, "Communicator", "       Fail");
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", "       Fail");
                     return;
                 }
                 // Copy Hub to PC
-                logger.Log(LogLevel.DEBUG, "Communicator", "   Copy Hub to PC");
+                logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "   Copy Hub to PC");
                 CopyHubToPC(hubFilePath, pcHubCopyBackPath);
                 if (File.Exists(pcHubCopyBackPath))
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", "       Success");
+                    logger.Log(LogLevel.INFO, "Communicator_selfTestMethod", "       Success");
                 }
                 else
                 {
-                    logger.Log(LogLevel.ERROR, "Communicator", "       Fail");
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", "       Fail");
                     return;
                 }
 
                 // Copy PC to Node (to a different temp name)
-                logger.Log(LogLevel.DEBUG, "Communicator", "   Copy PC to Node");
+                logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "   Copy PC to Node");
                 CopyPCtoNode(PCfilePath, nodePCFilePath, host);
                 if (NodeFileExists(nodePCFilePath, host))//, username))
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", "       Success");
+                    logger.Log(LogLevel.INFO, "Communicator_selfTestMethod", "       Success");
                 }
                 else
                 {
-                    logger.Log(LogLevel.ERROR, "Communicator", "       Fail");
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", "       Fail");
                 }
 
                 // Copy Node back to PC (different name)
-                logger.Log(LogLevel.DEBUG, "Communicator", "   Copy Node back to PC");
+                logger.Log(LogLevel.DEBUG, "Communicator_selfTestMethod", "   Copy Node back to PC");
                 CopyNodeToPC(nodePCFilePath, pcNodeCopyBackPath, host);
                 if (File.Exists(pcNodeCopyBackPath))
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", "       Success");
+                    logger.Log(LogLevel.INFO, "Communicator_selfTestMethod", "       Success");
                 }
                 else
                 {
-                    logger.Log(LogLevel.ERROR, "Communicator", "       Fail");
+                    logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", "       Fail");
                 }
 
                 //DeleteHubFile(hubFilePath);
@@ -897,7 +913,7 @@ namespace jCommunicator
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.ERROR, "Communicator", $"Test encountered error: {ex.Message}");
+                logger.Log(LogLevel.ERROR, "Communicator_selfTestMethod", $"Test encountered error: {ex.Message}");
             }
         }
     }
