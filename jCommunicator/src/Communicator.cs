@@ -12,10 +12,10 @@ namespace jCommunicator
     public enum ServiceStatus
     {
         Active = 0,
-        Inactive = 1,
-        Failed = 2,
-        Activating = 3,
-        Deactivating = 4,
+        Activating = 1,
+        Deactivating = 2,
+        Inactive = 3,
+        Failed = 4,
         Error = 5
     }
     public readonly struct SSHCheckResult
