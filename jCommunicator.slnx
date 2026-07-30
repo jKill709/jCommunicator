@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="jCommunicator/jCommunicator.csproj" />
+  <Project Path="jCommunicator_UnitTests/jCommunicator_Tests.csproj" Id="34fa038d-cc9a-42ad-a757-e82730f8e9fc" />
 </Solution>

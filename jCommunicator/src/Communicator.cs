@@ -293,8 +293,17 @@ namespace jCommunicator
         }
         public string[] GetListOfHubFiles(string directory, string fileExtension)
         {
-            // Ask remote system for a list of .log files
-            string cmd = $"ls -1 {directory}*.{fileExtension} 2>/dev/null";
+            // Normailze path components
+            directory = directory.Replace("\\", "/");
+            if (directory.EndsWith("/"))
+            {
+                directory = directory.TrimEnd('/');
+            }
+            if (!fileExtension.StartsWith('.'))
+                fileExtension = '.' + fileExtension;
+
+            // Request list of files in directory
+            string cmd = $"ls -1 \"{directory}\"/*{fileExtension} 2>/dev/null";
             string result = ExecuteHubCommand(cmd);
 
             return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -425,8 +434,17 @@ namespace jCommunicator
         }
         public string[] GetListOfNodeFiles(string directory, string fileExtension, string host, string username)
         {
+            // Normailze path components
+            directory = directory.Replace("\\", "/");
+            if (directory.EndsWith("/"))
+            {
+                directory = directory.TrimEnd('/');
+            }
+            if (!fileExtension.StartsWith('.'))
+                fileExtension = '.' + fileExtension;
+
             // Ask remote system for a list of .log files
-            string cmd = $"ls -1 {directory}*.{fileExtension} 2>/dev/null";
+            string cmd = $"ls -1 \"{directory}\"/*{fileExtension} 2>/dev/null";
             string result = ExecuteNodeCommand(cmd, host, username);
 
             return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -554,7 +572,7 @@ namespace jCommunicator
                 if (!string.IsNullOrEmpty(cmd.Error))
                 {
                     logger.Log(LogLevel.ERROR, "Communicator", $"SSH Error: {cmd.Error}");
-                    throw new FileNotFoundException($"SSH Error: {cmd.Error}");
+                    //throw new FileNotFoundException($"SSH Error: {cmd.Error}");
                 }
 
                 if (verbose && !string.IsNullOrWhiteSpace(result))
