@@ -113,5 +113,41 @@ namespace jCommunicator.Tests.Integration
             Assert.True(Directory.Exists(folder));
             Assert.True(File.Exists(local));
         }
+
+        [Fact]
+        public async Task CopyNodeToPCAsync_MultipleDownloads()
+        {
+            var tasks = new List<Task<DownloadResult>>();
+
+            for (int i = 0; i < 10; i++)
+            {
+                string remote =
+                    $"{TempDirectory}{Guid.NewGuid():N}.txt";
+
+                CreateNodeFile(
+                    _communicator,
+                    _node1Host,
+                    _node1User,
+                    remote,
+                    $"File {i}");
+
+                string local =
+                    Path.Combine(
+                        Path.GetTempPath(),
+                        Guid.NewGuid() + ".txt");
+
+                tasks.Add(
+                    _communicator.CopyNodeToPCAsync(
+                        remote,
+                        local,
+                        _node1Host));
+            }
+
+            DownloadResult[] results =
+                await Task.WhenAll(tasks);
+
+            Assert.All(results,
+                r => Assert.True(r.Success));
+        }
     }
 }
