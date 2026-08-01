@@ -34,10 +34,6 @@ namespace jCommunicator.Tests
 
             _communicator = new Communicator(_hubHost, _hubUser, _hubPass);
         }
-        ~CommunicatorTestBase()
-        {
-            Dispose();
-        }
         public void Dispose()
         {
             if (_communicator != null)

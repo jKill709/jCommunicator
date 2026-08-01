@@ -1,6 +1,8 @@
 ﻿using mLogger;
 using Renci.SshNet;
+using Renci.SshNet.Async;
 using Renci.SshNet.Messages.Connection;
+using Renci.SshNet.Sftp;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 
@@ -37,9 +39,21 @@ namespace jCommunicator
         {
             public string Host { get; set; }
             public string Username { get; set; }
+            public string Password { get; set; }
             public int LocalPort { get; set; }
             public ForwardedPortLocal Port { get; set; }
             public SftpClient Sftp { get; set; }
+
+            public string ConnectionHost => LocalPort == 22 ? Host : "127.0.0.1";
+
+            public SftpClient CreateSftpClient()
+            {
+                return new SftpClient(
+                    "127.0.0.1",
+                    LocalPort,
+                    Username,
+                    Password);
+            }
         }
 
         public readonly string _host;
@@ -50,9 +64,6 @@ namespace jCommunicator
         private readonly Dictionary<string, NodeInfo> _nodeConnections = new();
 
         private readonly object _lock = new object();
-
-        //private readonly RichTextBox _outputBox;
-        //private readonly Action<string> _logAction;
 
         public bool IsConnected => _sshClient != null && _sshClient.IsConnected;
 
@@ -70,7 +81,6 @@ namespace jCommunicator
         }
         public void Dispose()
         {
-
             logger.LogHeading(LogLevel.INFO, "Communicator", $"Closing Communicator for {_host}");
             Disconnect();
         }
@@ -78,13 +88,6 @@ namespace jCommunicator
         //Connection Methods
         public bool Connect()
         {
-            bool lockTaken = false;
-            Monitor.TryEnter(_lock, TimeSpan.FromSeconds(2), ref lockTaken);
-            if (!lockTaken)
-            {
-                logger.Log(LogLevel.WARN, "Communicator", "Could not acquire connection lock");
-                return false;
-            }
             lock (_lock)
             {
                 if (IsConnected) return true;
@@ -113,6 +116,7 @@ namespace jCommunicator
 
                         node.Sftp.Dispose();
                         node.Port.Stop();
+                        node.Port.Dispose();
                         node.Sftp = null;
                     }
                 }
@@ -161,7 +165,7 @@ namespace jCommunicator
                 return new SSHCheckResult(false, ex, sw.ElapsedMilliseconds);
             }
         }
-        public int AddNodeSFTP(string nodeHost, string nodeUsername, bool verbose = true)
+        public int AddNodeTunnel(string nodeHost, string nodeUsername, string nodePassword, bool verbose = true)
         {
             if (nodeHost == null || nodeHost == "")
                 throw new ArgumentNullException("nodeHost passed as null");
@@ -191,15 +195,16 @@ namespace jCommunicator
                 port.Start();
                 if (verbose) logger.Log(LogLevel.DEBUG, "Communicator", $"Forwarded port created for Node {nodeHost}: localhost:{localPort}");
 
-                var sftp = new SftpClient("127.0.0.1", localPort, nodeUsername, _password);
+                var sftp = new SftpClient("127.0.0.1", localPort, nodeUsername, nodePassword);
                 sftp.Connect();
-                if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"SFTP connection established to Node {nodeHost} via forwarded port");
+                if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Stable SFTP connection established to Node {nodeHost} via forwarded port");
 
                 //_nodeConnections[nodeHost] = (port, sftp);
                 _nodeConnections[nodeHost] = new NodeInfo
                 {
                     Host = nodeHost,
                     Username = nodeUsername,
+                    Password = nodePassword,
                     LocalPort = localPort,
                     Port = port,
                     Sftp = sftp
@@ -233,7 +238,7 @@ namespace jCommunicator
                     node.Port = newPort;
 
                     node.Sftp?.Dispose();
-                    node.Sftp = new SftpClient("127.0.0.1", node.LocalPort, node.Username, _password);
+                    node.Sftp = new SftpClient("127.0.0.1", node.LocalPort, node.Username, node.Password);
                     node.Sftp.Connect();
 
                     if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Rebuilt tunnel and SFTP for {node.Host}");
@@ -243,6 +248,72 @@ namespace jCommunicator
                     logger.Log(LogLevel.ERROR, "Communicator", $"Failed to rebuild tunnel for {node.Host}: {ex.Message}");
                 }
             }
+        }
+        private async Task<DownloadResult> DownloadAsync(string remoteFile, string localFile, string host)
+        {
+            var result = new DownloadResult()
+            {
+                RemotePath = remoteFile,
+                LocalPath = localFile
+            };
+
+            try
+            {
+                NodeInfo node;
+
+                if ("hub" ==  host.ToLower().Substring(0, 3))
+                {
+                    node = new NodeInfo { Host = host,
+                                          LocalPort = 22,
+                                          Username = _username,
+                                          Password = _password };
+                }
+                else
+                {
+                    node = _nodeConnections[host];
+                }
+
+                using var _client = new SftpClient(node.ConnectionHost, node.LocalPort, node.Username, node.Password);
+                _client.Connect();
+
+                if (!_client.Exists(remoteFile))
+                {
+                    result.FileExists = false;
+                    return result;
+                }
+
+                result.FileExists = true;
+
+                SftpFileAttributes info = _client.GetAttributes(remoteFile);
+
+                result.FileSize = info.Size;
+                result.LastWriteTime = info.LastWriteTime;
+
+                string? directory = Path.GetDirectoryName(localFile);
+
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                await using FileStream fs = File.Create(localFile);
+
+                await _client.DownloadAsync(remoteFile, fs);
+
+                await fs.FlushAsync();
+
+                result.DownloadSucceeded = true;
+
+                _client.DeleteFile(remoteFile);
+
+                result.DeleteSucceeded = true;
+            }
+            catch (Exception ex)
+            {
+                result.Exception = ex;
+            }
+
+            return result;
         }
 
         //Hub File Methods
@@ -257,7 +328,7 @@ namespace jCommunicator
                 }
                 else
                 {
-                    logger.Log(LogLevel.INFO, "Communicator", $"Hub file missing: {hubFilePath}");
+                    if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Hub file missing: {hubFilePath}");
                 }
                 return result.Contains("exists");
             }
@@ -483,11 +554,11 @@ namespace jCommunicator
         }
         public bool MoveNodeFile(string currentFilePath, string newFilePath, string host, string username, bool verbose = false)
         {
-            if (!_nodeConnections.TryGetValue(host, out var node))
-                throw new InvalidOperationException($"Node {host} not initialized.");
+                if (!_nodeConnections.TryGetValue(host, out var node))
+                    throw new InvalidOperationException($"Node {host} not initialized.");
 
             try
-            {
+                {
                 if (node.Sftp == null || !node.Sftp.IsConnected)
                 {
                     node.Sftp.Connect();
@@ -777,6 +848,10 @@ namespace jCommunicator
                 return false;
             }
             //if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Downloaded {nodeName}:{nodeFilePath} → {PCfilePath}");
+        }
+        public Task<DownloadResult> CopyNodeToPCAsync(string nodeFilePath, string PCfilePath, string nodeName, bool verbose = false)
+        {
+            return DownloadAsync(nodeFilePath, PCfilePath, nodeName);
         }
         public bool CopyPCtoNode(string PCfilePath, string nodeFilePath, string host, bool verbose = false)
         {

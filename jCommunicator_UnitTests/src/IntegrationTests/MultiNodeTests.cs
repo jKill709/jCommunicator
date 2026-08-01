@@ -23,8 +23,8 @@ namespace jCommunicator.Tests.Integration
         {
             Assert.True(_communicator!.Connect());
 
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
-            _communicator.AddNodeSFTP(_node2Host, _node2User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
+            _communicator.AddNodeTunnel(_node2Host, _node2User, _node2Pass);
         }
 
         [Fact]

@@ -19,7 +19,7 @@ namespace jCommunicator.Tests.Integration
         public CommandExecutionTests()
         {
             _communicator!.Connect();
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
         }
 
         #region Hub Commands

@@ -24,7 +24,7 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void AddFirstNode_Returns2200()
         {
-            int port = _communicator.AddNodeSFTP(_node1Host, _node1User);
+            int port = _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             Assert.Equal(2200, port);
         }
@@ -32,8 +32,8 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void AddSecondNode_Returns2201()
         {
-            int first = _communicator.AddNodeSFTP(_node1Host, _node1User);
-            int second = _communicator.AddNodeSFTP(_node2Host, _node2User);
+            int first = _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
+            int second = _communicator.AddNodeTunnel(_node2Host, _node2User, _node2Pass);
 
             Assert.Equal(2200, first);
             Assert.Equal(2201, second);
@@ -42,7 +42,7 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void AddedNode_CanAccessFiles()
         {
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             bool exists = _communicator.NodeFileExists(
                 "/etc/passwd",
@@ -54,8 +54,8 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void MultipleNodes_CanBothAccessFiles()
         {
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
-            _communicator.AddNodeSFTP(_node2Host, _node2User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
+            _communicator.AddNodeTunnel(_node2Host, _node2User, _node2Pass);
 
             Assert.True(
                 _communicator.NodeFileExists("/etc/passwd", _node1Host));
@@ -67,10 +67,10 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void AddDuplicateNode_DoesNotThrow()
         {
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             Exception ex = Record.Exception(() =>
-                _communicator.AddNodeSFTP(_node1Host, _node1User));
+                _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass));
 
             Assert.Null(ex);
         }
@@ -78,8 +78,8 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void AddDuplicateNode_ReturnsSamePort()
         {
-            int first = _communicator.AddNodeSFTP(_node1Host, _node1User);
-            int second = _communicator.AddNodeSFTP(_node1Host, _node1User);
+            int first = _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
+            int second = _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             Assert.Equal(first, second);
         }
@@ -89,9 +89,10 @@ namespace jCommunicator.Tests.Integration
         {
             Assert.ThrowsAny<Exception>(() =>
             {
-                _communicator.AddNodeSFTP(
+                _communicator.AddNodeTunnel(
                     "",
-                    _node1User);
+                    _node1User,
+                    _node1Pass);
             });
         }
 
@@ -101,9 +102,10 @@ namespace jCommunicator.Tests.Integration
             Assert.ThrowsAny<ArgumentNullException>(() =>
             {
 #pragma warning disable CS8625
-                _communicator.AddNodeSFTP(
+                _communicator.AddNodeTunnel(
                     null,
-                    _node1User);
+                    _node1User,
+                    _node1Pass);
 #pragma warning restore CS8625
             });
         }
@@ -113,16 +115,17 @@ namespace jCommunicator.Tests.Integration
         {
             Assert.ThrowsAny<Exception>(() =>
             {
-                _communicator.AddNodeSFTP(
+                _communicator.AddNodeTunnel(
                     _node1Host,
-                    "");
+                    "",
+                    _node1Pass);
             });
         }
 
         [Fact]
         public void Reconnect_RebuildsNodeConnections()
         {
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             _communicator.Disconnect();
             _communicator.Connect();
@@ -137,8 +140,8 @@ namespace jCommunicator.Tests.Integration
         [Fact]
         public void RegisterTwoNodes_InSequence_BothRemainAccessible()
         {
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
-            _communicator.AddNodeSFTP(_node2Host, _node2User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
+            _communicator.AddNodeTunnel(_node2Host, _node2User, _node2Pass);
 
             Assert.True(
                 _communicator.NodeFileExists("/etc/passwd", _node1Host));

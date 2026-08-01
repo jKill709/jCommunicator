@@ -25,9 +25,10 @@ namespace jCommunicator.Tests.Integration
             _communicator.Connect();
 
             // Establish SFTP tunnel
-            _communicator.AddNodeSFTP(
+            _communicator.AddNodeTunnel(
                 _node1Host,
-                _node1User);
+                _node1User,
+                _node1Pass);
         }
 
 

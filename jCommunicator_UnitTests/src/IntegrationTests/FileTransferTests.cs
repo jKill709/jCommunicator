@@ -173,7 +173,7 @@ namespace jCommunicator.Tests.Integration
         {
             _communicator!.Connect();
 
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             string hub = $"{HubTempDirectory}{RandomName()}.txt";
             string node = $"{NodeTempDirectory}{RandomName()}.txt";
@@ -208,7 +208,7 @@ namespace jCommunicator.Tests.Integration
         {
             _communicator!.Connect();
 
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             string node = $"{NodeTempDirectory}{RandomName()}.txt";
             string local = Path.Combine(Path.GetTempPath(), $"{RandomName()}.txt");
@@ -245,7 +245,7 @@ namespace jCommunicator.Tests.Integration
         {
             _communicator!.Connect();
 
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             string local = CreateLocalTestFile("PC To Node");
             string node = $"{NodeTempDirectory}{RandomName()}.txt";
@@ -310,7 +310,7 @@ namespace jCommunicator.Tests.Integration
         {
             _communicator!.Connect();
 
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             string original = CreateLocalBinaryFile(32768);
 
@@ -352,7 +352,7 @@ namespace jCommunicator.Tests.Integration
         {
             _communicator!.Connect();
 
-            _communicator.AddNodeSFTP(_node1Host, _node1User);
+            _communicator.AddNodeTunnel(_node1Host, _node1User, _node1Pass);
 
             string original = CreateLocalBinaryFile(65536);
 
