@@ -1,10 +1,8 @@
 ﻿using mLogger;
 using Renci.SshNet;
 using Renci.SshNet.Async;
-using Renci.SshNet.Messages.Connection;
 using Renci.SshNet.Sftp;
-using System.Drawing;
-using System.Runtime.CompilerServices;
+using System.IO.Enumeration;
 
 namespace jCommunicator
 { 
@@ -61,6 +59,7 @@ namespace jCommunicator
         private readonly string _password;
 
         private SshClient _sshClient;
+        private SftpClient _sftpClient;
         private readonly Dictionary<string, NodeInfo> _nodeConnections = new();
 
         private readonly object _lock = new object();
@@ -97,6 +96,8 @@ namespace jCommunicator
 
                 logger.Log(LogLevel.INFO, "Communicator", $"Connecting to Cluster Hub at {_username}@{_host}. Please wait...");
                 _sshClient.Connect();
+                _sftpClient = new SftpClient(_host, _username, _password);
+                _sftpClient.Connect();
                 RebuildNodeTunnels();
                 logger.Log(LogLevel.INFO, "Communicator", $"Connected to {_host}");
 
@@ -122,12 +123,19 @@ namespace jCommunicator
                 }
                 //_nodeConnections.Clear();
 
+                if (_sftpClient != null && _sftpClient.IsConnected)
+                {
+                    _sftpClient.Disconnect();
+                    logger.Log(LogLevel.INFO, "Communicator", "SFTP client disconnected");
+                }
+                _sftpClient?.Dispose();
+                _sftpClient = null;
+
                 if (_sshClient != null && _sshClient.IsConnected)
                 {
                     _sshClient.Disconnect();
                     logger.Log(LogLevel.INFO, "Communicator", "SSH client disconnected");
                 }
-
                 _sshClient?.Dispose();
                 _sshClient = null;
             }
@@ -165,7 +173,7 @@ namespace jCommunicator
                 return new SSHCheckResult(false, ex, sw.ElapsedMilliseconds);
             }
         }
-        public int AddNodeTunnel(string nodeHost, string nodeUsername, string nodePassword, bool verbose = true)
+        public int AddNodeTunnel(string nodeHost, string nodeUsername, string nodePassword, bool verbose = false)
         {
             if (nodeHost == null || nodeHost == "")
                 throw new ArgumentNullException("nodeHost passed as null");
@@ -249,18 +257,23 @@ namespace jCommunicator
                 }
             }
         }
-        private async Task<DownloadResult> DownloadAsync(string remoteFile, string localFile, string host)
+        /*private async Task<DownloadResult> DownloadAsync(string remoteFile, string localFile, string host)
         {
             var result = new DownloadResult()
             {
-                RemotePath = remoteFile,
-                LocalPath = localFile
+                //RemotePath = remoteFile,
+                //LocalPath = localFile
+                LocalFileName = localFile.Split('\\').Last(),
+                LocalDir = Path.GetDirectoryName(localFile)!,
+                RemoteFileName = remoteFile,
+                RemoteDir = Path.GetDirectoryName(remoteFile)!
             };
 
             try
             {
                 NodeInfo node;
 
+                // Determine if hub or node transaction based on host prefix
                 if ("hub" ==  host.ToLower().Substring(0, 3))
                 {
                     node = new NodeInfo { Host = host,
@@ -273,9 +286,12 @@ namespace jCommunicator
                     node = _nodeConnections[host];
                 }
 
+                //Create and connect SFTP client
                 using var _client = new SftpClient(node.ConnectionHost, node.LocalPort, node.Username, node.Password);
                 _client.Connect();
 
+
+                // Check if the remote file exists
                 if (!_client.Exists(remoteFile))
                 {
                     result.FileExists = false;
@@ -284,11 +300,13 @@ namespace jCommunicator
 
                 result.FileExists = true;
 
+                // Get file attributes for size and last write time
                 SftpFileAttributes info = _client.GetAttributes(remoteFile);
 
                 result.FileSize = info.Size;
                 result.LastWriteTime = info.LastWriteTime;
 
+                // Transfer the file to the local path
                 string? directory = Path.GetDirectoryName(localFile);
 
                 if (!string.IsNullOrEmpty(directory))
@@ -304,6 +322,7 @@ namespace jCommunicator
 
                 result.DownloadSucceeded = true;
 
+                // Delete the remote file
                 _client.DeleteFile(remoteFile);
 
                 result.DeleteSucceeded = true;
@@ -314,6 +333,107 @@ namespace jCommunicator
             }
 
             return result;
+        }*/
+
+
+        private async Task<List<DownloadResult>> DownloadBatchAsync(SftpClient sftp, List<string> remoteFiles, string localFileDirectory, string nonDeleteFileName = "", bool verbose = false)
+        {
+            var results = new List<DownloadResult>();
+
+            foreach (string remoteFile in remoteFiles)
+            {
+                string fileName = Path.GetFileName(remoteFile);
+                DownloadResult result = new DownloadResult(fileName, Path.GetDirectoryName(remoteFile)!, localFileDirectory);
+                results.Add(result);
+            }            
+
+            foreach (DownloadResult result in results)
+            {                
+                await DownloadFileAsync(sftp, result, nonDeleteFileName, verbose);
+            }
+
+            return results;
+        }
+        private static async Task<DownloadResult> DownloadFileAsync(SftpClient sftp, DownloadResult result, string nonDeleteFileName = "", bool verbose = false)
+        {
+            try
+            {
+                // Check if the remote file exists
+                await CheckExists(sftp, result, verbose);
+                if (result.FileExists)
+                {
+                    // Get file attributes for size and last write time
+                    GetAttributes(sftp, result, verbose);
+
+                    // Transfer the file to the local path
+                    await DownloadFile(sftp, result, verbose);
+                    if (result.DownloadSucceeded && result.RemoteFileName != nonDeleteFileName)
+                    {
+                        // Delete the remote file unles it is the nonDeleteFile
+                        DeleteFile(sftp, result, verbose);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Exception = ex;
+            }
+
+            return result;
+        }
+        private static async Task CheckExists(SftpClient sftp, DownloadResult result, bool verbose = false)
+        {
+            result.FileExists = await sftp.ExistsAsync(result.RemotePath);
+            if (verbose)
+            {    
+                if (result.FileExists)
+                    Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Remote file exists: {result.RemotePath}");
+                else
+                    Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Remote file does not exist: {result.RemotePath}");
+            }
+        }
+        private static void GetAttributes(SftpClient sftp, DownloadResult result, bool verbose = false)
+        {
+            if (!result.FileExists)
+            {
+                result.FileSize = 0;
+                result.LastWriteTime = DateTime.MinValue;
+            }
+
+            // Get file attributes for size and last write time
+            SftpFileAttributes info = sftp.GetAttributes(result.RemotePath);
+
+            result.FileSize = info.Size;
+            result.LastWriteTime = info.LastWriteTime;
+            if (verbose)
+            {
+                Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Remote file attributes for {result.RemotePath}: Size={result.FileSize} bytes, LastWriteTime={result.LastWriteTime}");
+            }
+        }
+        private static async Task DownloadFile(SftpClient _client, DownloadResult result, bool verbose = false)
+        {
+            if (!string.IsNullOrEmpty(result.LocalDir))
+            {
+                Directory.CreateDirectory(result.LocalDir);
+            }
+
+            await using FileStream fs = File.Create(result.LocalPath);
+
+            await _client.DownloadAsync(result.RemotePath, fs);
+
+            await fs.FlushAsync();
+
+            result.DownloadSucceeded = true;
+
+            Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Downloaded {result.RemotePath} → {result.LocalPath} ({result.FileSize} bytes)");
+        }
+        private static void DeleteFile(SftpClient _client, DownloadResult result, bool verbose = false)
+        {
+            _client.DeleteFile(result.RemotePath);
+
+            result.DeleteSucceeded = true;
+
+            Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Deleted remote file: {result.RemotePath}");
         }
 
         //Hub File Methods
@@ -803,6 +923,44 @@ namespace jCommunicator
                 throw;
             }
         }
+        public async Task<bool> CopyHubToPCAsync(string HubFilePath, string PCFilePath, bool verbose = false)
+        {
+            if (!IsConnected)
+            {
+                Connect();
+                if (!IsConnected)
+                {
+                    logger.Log(LogLevel.ERROR, "Communicator", "Failed to connect before executing node command.");
+                    throw new InvalidOperationException("Not connected to hub.");
+                }
+            }
+            DownloadResult result = new DownloadResult(HubFilePath, PCFilePath);
+            try
+            {
+                await DownloadFileAsync(_sftpClient, result, result.RemoteFileName, verbose);
+
+                return result.DownloadSucceeded;
+            }
+            catch (Exception ex)
+            {
+                logger.Log(LogLevel.ERROR, "Communicator", $"Error copying {HubFilePath} → {PCFilePath}: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<List<DownloadResult>> CopyBatchHubToPCAsync(List<string> hubFilePaths, string localDirectory, string nonDeleteFileName = "", bool verbose = false)
+        {
+            NodeInfo node = new NodeInfo { Host = _host,
+                                           LocalPort = 22,
+                                           Username = _username,
+                                           Password = _password };
+
+            //Create and connect SFTP client
+            //using var sftp = new SftpClient(node.ConnectionHost, node.LocalPort, node.Username, node.Password);
+            //CancellationToken token = new CancellationToken();
+            //await sftp.ConnectAsync(token);
+
+            return await DownloadBatchAsync(_sftpClient, hubFilePaths, localDirectory, nonDeleteFileName);
+        }
         public bool CopyNodeToPC(string nodeFilePath, string PCfilePath, string nodeName, bool verbose = false)
         {
             if (!_nodeConnections.TryGetValue(nodeName, out var node))
@@ -849,9 +1007,26 @@ namespace jCommunicator
             }
             //if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Downloaded {nodeName}:{nodeFilePath} → {PCfilePath}");
         }
-        public Task<DownloadResult> CopyNodeToPCAsync(string nodeFilePath, string PCfilePath, string nodeName, bool verbose = false)
+        public async Task<DownloadResult> CopyNodeToPCAsync(string nodeFilePath, string PCfilePath, string nodeName, bool verbose = false)
         {
-            return DownloadAsync(nodeFilePath, PCfilePath, nodeName);
+            DownloadResult result = new DownloadResult(nodeFilePath, PCfilePath);
+            NodeInfo node = _nodeConnections[nodeName];
+            //Create and connect SFTP client
+            //using var sftp = new SftpClient(node.ConnectionHost, node.LocalPort, node.Username, node.Password);
+            //CancellationToken token = new CancellationToken();
+            //await sftp.ConnectAsync(token);
+
+            return await DownloadFileAsync(node.Sftp, result);
+        }
+        public async Task<List<DownloadResult>> CopyBatchNodeToPCAsync(List<string> nodeFilePaths, string localDirectory, string host, string nonDeleteFileName = "", bool verbose = false)
+        {
+            NodeInfo node = _nodeConnections[host];
+            //Create and connect SFTP client
+            //using var sftp = new SftpClient(node.ConnectionHost, node.LocalPort, node.Username, node.Password);
+            //CancellationToken token = new CancellationToken();
+            //await sftp.ConnectAsync(token);
+
+            return await DownloadBatchAsync(node.Sftp, nodeFilePaths, localDirectory, nonDeleteFileName, verbose);
         }
         public bool CopyPCtoNode(string PCfilePath, string nodeFilePath, string host, bool verbose = false)
         {
