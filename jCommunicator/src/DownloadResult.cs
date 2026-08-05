@@ -6,7 +6,7 @@ namespace jCommunicator
     {
         public ClusterFileIOCommand Command { get; set; }
 
-        public SftpFileAttributes Attributes { get; set; }
+        public SftpFileAttributes? Attributes { get; set; }
 
         public bool FileExists { get; set; }
         public bool MainProcedureSucceeded { get; set; }
@@ -20,10 +20,13 @@ namespace jCommunicator
         {
             Command = command;
         }
-
+        public DownloadResult(string remotePath, string localPath, ClusterFileIOCommand command)
+        {
+            Command = new ClusterFileIOCommand(remotePath, localPath, command);
+        }
         public DownloadResult(string fileName, string remoteDir, string localDir, ClusterFileIOCommand command)
         {
-            Command = command;
+            Command = new ClusterFileIOCommand(fileName, remoteDir, localDir, command);
         }
 
         public override string ToString()
@@ -32,8 +35,8 @@ namespace jCommunicator
                 $"Remote: {Command.RemotePath}\n" +
                 $"Local : {Command.LocalPath}\n" +
                 $"Exists: {FileExists}\n" +
-                $"Size  : {Attributes.Size}\n" +
-                $"Date  : {Attributes.LastWriteTime}\n" +
+                $"Size  : {Attributes?.Size.ToString() ?? "N/A"}\n" +
+                $"Date  : {Attributes?.LastWriteTime.ToString() ?? "N/A"}\n" +
                 $"Downloaded: {MainProcedureSucceeded}\n" +
                 $"Deleted   : {DeleteSucceeded}\n" +
                 $"Success   : {Success}\n" +
@@ -53,12 +56,12 @@ namespace jCommunicator
 
         public ClusterFileIOCommandType Type { get; set;  }
 
-        public bool checkExists { get; }
-        public bool getAttributes { get; }
-        public bool deleteAfter { get; }
-        public bool checkSize { get; }
+        public bool checkExists { get; set; }
+        public bool getAttributes { get; set; }
+        public bool deleteAfter { get; set; }
+        public bool checkSize { get; set; }
 
-        public ClusterFileIOCommand (string remotePath, string localPath, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool download = false, bool upload = false, bool deleteAfter = false, bool checkSize = false)
+        public ClusterFileIOCommand (string remotePath, string localPath, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool deleteAfter = false, bool checkSize = false)
         {
             SetPaths(remotePath, localPath);
 
@@ -85,9 +88,23 @@ namespace jCommunicator
                     this.deleteAfter = true;
                     break;
                 }
+                case ClusterFileIOCommandType.Download:
+                {
+                    break;
+                }
+                case ClusterFileIOCommandType.Upload:
+                {
+                    break;
+                }
+                case ClusterFileIOCommandType.Move:
+                {
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported command type: {type}");
             }
         }
-        public ClusterFileIOCommand(string fileName, string remoteDir, string localDir, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool download = false, bool upload = false, bool deleteAfter = false, bool checkSize = false)
+        public ClusterFileIOCommand(string fileName, string remoteDir, string localDir, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool deleteAfter = false, bool checkSize = false)
         {
             SetPaths(fileName, remoteDir, localDir);
 
@@ -133,6 +150,23 @@ namespace jCommunicator
 
         private void SetPaths(string remotePath, string localPath)
         {
+            if (remotePath == null)
+            {
+                throw new ArgumentNullException(nameof(remotePath), "Remote path cannot be null.");
+            } 
+            else if (string.IsNullOrWhiteSpace(remotePath))
+            {
+                throw new ArgumentOutOfRangeException(nameof(remotePath), "Remote path cannot be empty.");
+            }
+            if (localPath == null)
+            {
+                throw new ArgumentNullException(nameof(localPath), "Local path cannot be null.");
+            }
+            else if (string.IsNullOrWhiteSpace(localPath))
+            {
+                throw new ArgumentOutOfRangeException(nameof(localPath), "Local path cannot be empty.");
+            }
+
             RemoteFileName = Path.GetFileName(remotePath);
             RemoteDir = Path.GetDirectoryName(remotePath)!.Replace('\\', '/');
             LocalFileName = Path.GetFileName(localPath);
@@ -142,9 +176,9 @@ namespace jCommunicator
         private void SetPaths(string fileName, string remoteDir, string localDir)
         {
             RemoteFileName = fileName;
-            RemoteDir = remoteDir.Replace('\\', '/');
+            RemoteDir = remoteDir.Replace('\\', '/').TrimEnd('/');
             LocalFileName = fileName;
-            LocalDir = localDir;
+            LocalDir = localDir.TrimEnd('\\');
         }
     }
 

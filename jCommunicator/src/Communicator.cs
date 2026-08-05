@@ -438,6 +438,7 @@ namespace jCommunicator
                         await MoveFileAsync(sftp, result, verbose);
                         break;
                 }
+                result.MainProcedureSucceeded = true;
 
                 // Delete after Download if specified in the command
                 if (result.Command.deleteAfter)
@@ -446,6 +447,7 @@ namespace jCommunicator
                     {
                         // Delete the remote file unles it is the nonDeleteFile
                         await DeleteFileAsync(sftp, result, verbose);
+                        result.DeleteSucceeded = true;
                     }
                 }
                 
@@ -487,7 +489,7 @@ namespace jCommunicator
             await _client.DownloadAsync(result.Command.RemotePath, fs);
             await fs.FlushAsync();
             result.MainProcedureSucceeded = true;
-            Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Downloaded {result.Command.RemotePath} → {result.Command.LocalPath} ({result.Attributes.Size} bytes)");
+            if (verbose) Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Downloaded {result.Command.RemotePath} → {result.Command.LocalPath} ({result.Attributes.Size} bytes)");
         }
         private static async Task UploadFileAsync(SftpClient _client, DownloadResult result, bool verbose = false)
         {
@@ -726,7 +728,7 @@ namespace jCommunicator
 
             return await DownloadAsync(_nodeConnections[host].Sftp, result);
         }
-        public async Task<List<DownloadResult>> PCtoNodesAsync(List<string> nodeFilePaths, string localDirectory, ClusterFileIOCommand command, string host, bool verbose = false)
+        public async Task<List<DownloadResult>> PCtoNodeAsync(List<string> nodeFilePaths, string localDirectory, ClusterFileIOCommand command, string host, bool verbose = false)
         {
             await CheckConnectionAsync();
             List<ClusterFileIOCommand> newCommands = new List<ClusterFileIOCommand>();
