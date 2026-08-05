@@ -29,11 +29,13 @@ namespace jCommunicator.Tests
         // --- State ---
         protected Communicator _com;
 
-        public Logger logger = Logger.Instance;
+        public Logger _logger = Logger.Instance;
+        public InMemorySink _logSink = new InMemorySink();
 
         public CommunicatorTestBase()
         {
-            logger.Initialize("CommunicatorTestBase");
+            _logger.Initialize("CommunicatorTestBase");
+            _logger.AddSink(_logSink);
 
             _com = new Communicator(hubHost, hubUser, hubPass);
 
@@ -53,13 +55,15 @@ namespace jCommunicator.Tests
         {
             return $"{localTempDirectory}TestFile_{Guid.NewGuid():N}.txt";
         }
-        protected string CreateHubFile(Communicator com, string path, string contents = "Contents")
+        protected async Task<string> CreateHubFile(Communicator com, string path, string contents = "Contents")
         {
-            return Task.Run(() => com.ExecuteHubCommandAsync($"echo '{contents}' > {path}")).Result;
+            await com.ExecuteHubCommandAsync($"echo '{contents}' > {path}");
+            return path;
         }
-        protected string CreateNodeFile(Communicator com, string host, string username, string path, string contents = "Contents")
+        protected async Task<string> CreateNodeFile(Communicator com, string host, string username, string path, string contents = "Contents")
         {
-            return Task.Run(() => com.ExecuteNodeCommandAsync($"echo '{contents}' > {path}", host, username)).Result;
+            await com.ExecuteNodeCommandAsync($"echo '{contents}' > {path}", host, username);
+            return path;
         }
 
         protected DownloadResult CreateDownloadResult(string remotePath, string localPath, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool download = false, bool upload = false, bool deleteAfter = false, bool checkSize = false)

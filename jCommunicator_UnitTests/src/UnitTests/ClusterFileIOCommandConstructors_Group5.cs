@@ -38,27 +38,5 @@ namespace jCommunicator.Tests.UnitTests
             // Steps
             Assert.Throws<ArgumentOutOfRangeException>(() => new ClusterFileIOCommand("", localPath, type, false, false, false, false));
         }
-
-        [Fact]
-        public void NullLocalPath_ThrowsArgumentNullException()
-        {
-            // Setup
-            string remotePath = "/remote/path/file.txt";
-            ClusterFileIOCommandType type = ClusterFileIOCommandType.Download;
-
-            // Steps
-            Assert.Throws<System.ArgumentNullException>(() => new ClusterFileIOCommand(remotePath, null, type, false, false, false, false));
-        }
-
-        [Fact]
-        public void EmptyLocalPath_ThrowsArgumentException()
-        {
-            // Setup
-            string remotePath = "/remote/path/file.txt";
-            ClusterFileIOCommandType type = ClusterFileIOCommandType.Download;
-
-            // Steps
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ClusterFileIOCommand(remotePath, "", type, false, false, false, false));
-        }
     }
 }

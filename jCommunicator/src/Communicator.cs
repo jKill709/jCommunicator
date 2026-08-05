@@ -2,6 +2,8 @@
 using Renci.SshNet;
 using Renci.SshNet.Async;
 using Renci.SshNet.Sftp;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace jCommunicator
 { 
@@ -28,6 +30,19 @@ namespace jCommunicator
             Success = success;
             Exception = exception;
             checkTimespan = checkTime;
+        }
+    }
+    public struct FileInfo
+    {
+        public string Name { get; }
+        public long Length { get; }
+        public DateTime LastWriteTime { get; }
+
+        public FileInfo(string name, long length, DateTime lastWriteTime)
+        {
+            Name = name;
+            Length = length;
+            LastWriteTime = lastWriteTime;
         }
     }
     public class Communicator : IAsyncDisposable
@@ -83,6 +98,7 @@ namespace jCommunicator
             DisconnectAsync();
         }
 
+        #region Connection and Checks
         //Connection Methods
         public async Task<bool> ConnectAsync()
         {
@@ -305,9 +321,6 @@ namespace jCommunicator
                 }
             }
         }
-
-
-        // SSH Command Methods
         public async Task<bool> PingNodeAsync(string host, bool verbose = false)
         {
             try
@@ -330,6 +343,11 @@ namespace jCommunicator
                 return false;
             }
         }
+        #endregion
+
+
+        #region Private Helpers
+        // SSH Command Methods
         public async Task<string> ExecuteHubCommandAsync(string command, bool verbose = false)
         {
             await CheckConnectionAsync();
@@ -363,38 +381,6 @@ namespace jCommunicator
             string nodeCommand = $"ssh -o BatchMode=yes {username}@{host} \"{escapedCmd}\"";
             if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"{username}: Executing via SSH-> {cmd}");
             return await ExecuteHubCommandAsync(nodeCommand, verbose);
-        }
-
-        // Private untargeted file methods
-        private static async Task<List<SftpFile>> GetListOfFilesAsync(SftpClient sftp, string directory, string fileExtension, bool verbose = false)
-        {
-            // Normailze path components
-            directory = directory.Replace("\\", "/");
-            if (directory.EndsWith("/"))
-            {
-                directory = directory.TrimEnd('/');
-            }
-            if (!fileExtension.StartsWith('.'))
-                fileExtension = '.' + fileExtension;
-            List<SftpFile> files = new List<SftpFile>(await sftp.ListDirectoryAsync(directory));
-            return files.Where(f => !f.IsDirectory && !f.IsSymbolicLink && f.Name.EndsWith(fileExtension, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-        private static async Task<List<DownloadResult>> DownloadAsync(SftpClient sftp, List<string> remoteFiles, string localFileDirectory, ClusterFileIOCommand command, bool verbose = false)
-        {
-            List<ClusterFileIOCommand> commands = new List<ClusterFileIOCommand>();
-
-            foreach (string remoteFile in remoteFiles)
-            {
-                string fileName = Path.GetFileName(remoteFile);
-                ClusterFileIOCommand currentCommand = command;
-                currentCommand.RemoteFileName = Path.GetFileName(remoteFile);
-                currentCommand.RemoteDir = Path.GetDirectoryName(remoteFile)!.Replace('\\', '/');
-                currentCommand.LocalFileName = Path.GetFileName(localFileDirectory);
-                currentCommand.LocalDir = Path.GetDirectoryName(localFileDirectory)!;
-                commands.Add(currentCommand);
-            }            
-          
-            return await DownloadAsync(sftp, commands, verbose); //maybe remove await?
         }
         private static async Task<List<DownloadResult>> DownloadAsync(SftpClient sftp, List<ClusterFileIOCommand> commands, bool verbose = false)
         {
@@ -494,8 +480,8 @@ namespace jCommunicator
             await using FileStream fs = File.Create(result.Command.LocalPath);
             await _client.DownloadAsync(result.Command.RemotePath, fs);
             await fs.FlushAsync();
-            result.MainProcedureSucceeded = true;
-            if (verbose) Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Downloaded {result.Command.RemotePath} → {result.Command.LocalPath} ({result.Attributes.Size} bytes)");
+            result.MainProcedureSucceeded = true; 
+            if (verbose) Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Downloaded '{result.Command.RemotePath}' → '{result.Command.LocalPath}' ({result.Attributes?.Size} bytes)");
         }
         private static async Task UploadFileAsync(SftpClient _client, DownloadResult result, bool verbose = false)
         {
@@ -526,7 +512,9 @@ namespace jCommunicator
 
             Logger.Instance.Log(LogLevel.INFO, "Communicator", $"Deleted remote file: {result.Command.RemotePath}");
         }
+        #endregion
 
+        #region Public API
         // Hub File Methods
         public async Task<bool> HubFileExists(string hubFilePath, bool verbose = false)
         {
@@ -555,9 +543,63 @@ namespace jCommunicator
                 return DateTime.MinValue;
             }
         }
-        public async Task<List<SftpFile>> GetListOfHubFiles(string directory, string fileExtension)
+        public async Task<List<LinuxFileInfo>> GetListOfHubFiles(string directory, string fileExtension, bool verbose = false)
         {
-            return await GetListOfFilesAsync(_sftpClient, directory, fileExtension);
+            if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Getting list of files from {_host}: {directory}/*.{fileExtension.TrimStart('.')}");
+            string command = $"ls -l --full-time \"{directory}\"/*.{fileExtension.TrimStart('.')}";
+            string output = await ExecuteHubCommandAsync(command, verbose);
+
+            var files = new List<LinuxFileInfo>();
+
+            // Skip "total xxx"
+            var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            Regex regex = new Regex(
+                @"^(?<perm>\S+)\s+" +
+                @"(?<links>\d+)\s+" +
+                @"(?<owner>\S+)\s+" +
+                @"(?<group>\S+)\s+" +
+                @"(?<size>\d+)\s+" +
+                @"(?<date>\d{4}-\d{2}-\d{2})\s+" +
+                @"(?<time>\d{2}:\d{2}:\d{2}\.\d+)\s+" +
+                @"(?<offset>[+-]\d{4})\s+" +
+                @"(?<name>.+)$");
+
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("total "))
+                    continue;
+
+                Match match = regex.Match(line);
+                if (!match.Success)
+                    continue;
+
+                string time = match.Groups["time"].Value;
+                int dot = time.IndexOf('.');
+                if (dot >= 0 && time.Length - dot - 1 > 7)
+                {
+                    time = time.Substring(0, dot + 8);
+                }
+                string offset = match.Groups["offset"].Value;
+                offset = offset.Insert(offset.Length - 2, ":");
+                string timestamp = $"{match.Groups["date"].Value} {time} {offset}";
+
+                files.Add(new LinuxFileInfo
+                {
+                    Permissions = match.Groups["perm"].Value,
+                    HardLinks = int.Parse(match.Groups["links"].Value),
+                    Owner = match.Groups["owner"].Value,
+                    Group = match.Groups["group"].Value,
+                    Size = long.Parse(match.Groups["size"].Value),
+                    LastWriteTime = DateTimeOffset.ParseExact(
+                        timestamp,
+                        "yyyy-MM-dd HH:mm:ss.fffffff zzz",
+                        CultureInfo.InvariantCulture),
+                    Name = match.Groups["name"].Value
+                });
+            }
+
+            return files;
         }
         public async Task<bool> DeleteHubFile(string hubFilePath, bool verbose = true)
         {
@@ -591,6 +633,9 @@ namespace jCommunicator
         // Node File Methods
         public async Task<bool> NodeFileExists(string nodeFilePath, string host, bool verbose = false)
         {
+            if (!_nodeConnections.ContainsKey(host))
+                throw new System.Net.Sockets.SocketException();
+
             try
             {
                 DownloadResult result = new DownloadResult(new ClusterFileIOCommand(nodeFilePath.Split().Last(), "", ClusterFileIOCommandType.Exists, checkExists: true));
@@ -605,23 +650,90 @@ namespace jCommunicator
         }
         public async Task<DateTime?> NodeFileLastModified(string nodeFilePath, string host, bool verbose = false)
         {
+            if (!_nodeConnections.ContainsKey(host))
+                throw new System.Net.Sockets.SocketException();
+
             try
             {
                 DownloadResult result = new DownloadResult(new ClusterFileIOCommand(nodeFilePath.Split().Last(), "", ClusterFileIOCommandType.Attributes, getAttributes: true));
                 await CheckExistsAsync(_nodeConnections[host].Sftp, result, verbose);
-                return result.Attributes.LastWriteTime;
+                if (verbose)
+                {
+                    logger.Log(LogLevel.INFO, "Communicator", $"File {nodeFilePath} on {host} last written to: {result.Attributes?.LastWriteTime}");
+                }
+                return result.Attributes?.LastWriteTime;
             }
             catch (FileNotFoundException ex)
             {
                 return DateTime.MinValue;
             }
         }
-        public async Task<List<SftpFile>> GetListOfNodeFiles(string directory, string fileExtension, string host, string username)
+        public async Task<List<LinuxFileInfo>> GetListOfNodeFiles(string directory, string fileExtension, string host, string username, bool verbose = false)
         {
-            return await GetListOfFilesAsync(_nodeConnections[host].Sftp, directory, fileExtension);
+            if (!_nodeConnections.ContainsKey(host))
+                throw new System.Net.Sockets.SocketException();
+
+            if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Getting list of files from node {username}@{host}: {directory}/*.{fileExtension.TrimStart('.')}");
+            string command = $"ls -l --full-time \"{directory}\"/*.{fileExtension.TrimStart('.')}";
+            string output = await ExecuteNodeCommandAsync(command, host, username, verbose);
+
+            var files = new List<LinuxFileInfo>();
+
+            // Skip "total xxx"
+            var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            Regex regex = new Regex(
+                @"^(?<perm>\S+)\s+" +
+                @"(?<links>\d+)\s+" +
+                @"(?<owner>\S+)\s+" +
+                @"(?<group>\S+)\s+" +
+                @"(?<size>\d+)\s+" +
+                @"(?<date>\d{4}-\d{2}-\d{2})\s+" +
+                @"(?<time>\d{2}:\d{2}:\d{2}\.\d+)\s+" +
+                @"(?<offset>[+-]\d{4})\s+" +
+                @"(?<name>.+)$");
+
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("total "))
+                    continue;
+
+                Match match = regex.Match(line);
+                if (!match.Success)
+                    continue;
+
+                string time = match.Groups["time"].Value;
+                int dot = time.IndexOf('.');
+                if (dot >= 0 && time.Length - dot - 1 > 7)
+                {
+                    time = time.Substring(0, dot + 8);
+                }
+                string offset = match.Groups["offset"].Value;
+                offset = offset.Insert(offset.Length - 2, ":");
+                string timestamp = $"{match.Groups["date"].Value} {time} {offset}";
+
+                files.Add(new LinuxFileInfo
+                {
+                    Permissions = match.Groups["perm"].Value,
+                    HardLinks = int.Parse(match.Groups["links"].Value),
+                    Owner = match.Groups["owner"].Value,
+                    Group = match.Groups["group"].Value,
+                    Size = long.Parse(match.Groups["size"].Value),
+                    LastWriteTime = DateTimeOffset.ParseExact(
+                        timestamp,
+                        "yyyy-MM-dd HH:mm:ss.fffffff zzz",
+                        CultureInfo.InvariantCulture),
+                    Name = match.Groups["name"].Value
+                });
+            }
+
+            return files;
         }
         public async Task<bool> DeleteNodeFile(string nodeFilePath, string host, bool verbose = false)
         {
+            if (!_nodeConnections.ContainsKey(host))
+                throw new System.Net.Sockets.SocketException();
+
             try
             {
                 DownloadResult result = new DownloadResult(new ClusterFileIOCommand(nodeFilePath.Split().Last(), "", ClusterFileIOCommandType.Delete, deleteAfter: true));
@@ -636,15 +748,19 @@ namespace jCommunicator
         }
         public async Task<bool> MoveNodeFile(string currentFilePath, string newFilePath, string host, string username, bool verbose = false)
         {
+            if (!_nodeConnections.ContainsKey(host))
+                throw new System.Net.Sockets.SocketException();
+
             try
             {
                 CancellationToken renameToken = new CancellationToken();
                 await _nodeConnections[host].Sftp.RenameFileAsync(currentFilePath.Replace('\\', '/'), newFilePath.Replace('\\', '/'), renameToken);
+                if (verbose) logger.Log(LogLevel.INFO, "Communicator", $"Successfully renamed {host} file: {currentFilePath} → {newFilePath}");
                 return true;
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.ERROR, "Communicator", $"Error renaming {currentFilePath} → {newFilePath}: {ex.Message}");
+                logger.Log(LogLevel.ERROR, "Communicator", $"Error renaming {host} file: {currentFilePath} → {newFilePath}: {ex.Message}");
                 throw;
             }
         }
@@ -753,5 +869,6 @@ namespace jCommunicator
 
             return await DownloadAsync(_nodeConnections[host].Sftp, commands, verbose);
         }
+        #endregion
     }
 }

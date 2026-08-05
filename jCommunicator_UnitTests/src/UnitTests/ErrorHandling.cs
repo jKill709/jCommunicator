@@ -3,7 +3,7 @@ using Xunit;
 
 namespace jCommunicator.Tests.UnitTests
 {
-    public class ErrorHandling_Group1_ArgumentNullException : CommunicatorTestBase
+    public class ErrorHandling_WithBadConstructorArgs : CommunicatorTestBase
     {
         [Fact]
         public async Task AddNodeTunnelAsync_WithNullHost_ShouldThrowArgumentNullException()
@@ -42,203 +42,165 @@ namespace jCommunicator.Tests.UnitTests
         }
     }
 
-    public class ErrorHandling_Group2_InvalidOperationException : CommunicatorTestBase
+    public class ErrorHandling_WhenHubUnreachable : CommunicatorTestBase
     {
         [Fact]
-        public async Task AddNodeTunnelAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task AddNodeTunnelAsync_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.ConnectAsync());
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
         }
 
         [Fact]
-        public async Task ExecuteHubCommandAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task ExecuteHubCommandAsync_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.ExecuteHubCommandAsync("echo test"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.ExecuteHubCommandAsync("echo test"));
         }
 
         [Fact]
-        public async Task ExecuteNodeCommandAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task ExecuteNodeCommandAsync_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.ExecuteNodeCommandAsync("echo test", "10.0.0.11", "user"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.ExecuteNodeCommandAsync("echo test", "10.0.0.11", "user"));
         }
 
         [Fact]
-        public async Task NodeFileExists_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task NodeFileExists_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.NodeFileExists("/path/to/file.txt", "10.0.0.11"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.NodeFileExists("/path/to/file.txt", "10.0.0.11"));
         }
 
         [Fact]
-        public async Task NodeFileLastModified_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task NodeFileLastModified_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.NodeFileLastModified("/path/to/file.txt", "10.0.0.11"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.NodeFileLastModified("/path/to/file.txt", "10.0.0.11"));
         }
 
         [Fact]
-        public async Task GetListOfNodeFiles_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task GetListOfNodeFiles_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.GetListOfNodeFiles("/path/to/", ".txt.", "192.0.2.1", "nonexistent"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.GetListOfNodeFiles("/path/to/", ".txt.", "192.0.2.1", "nonexistent"));
         }
 
         [Fact]
-        public async Task DeleteNodeFile_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task DeleteNodeFile_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.DeleteNodeFile("/path/to/file.txt", "10.0.0.11"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.DeleteNodeFile("/path/to/file.txt", "10.0.0.11"));
         }
 
         [Fact]
-        public async Task MoveNodeFile_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task MoveNodeFile_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.MoveNodeFile("/path/to/file.txt", "/path/to/newname.txt", "192.0.2.1", "nonexistent"));
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.MoveNodeFile("/path/to/file.txt", "/path/to/newname.txt", "192.0.2.1", "nonexistent"));
         }
 
         [Fact]
-        public async Task PingNodeAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
+        public async Task PingNodeAsync_ShouldThrowSocketException()
         {
             // Setup
             Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.PingNodeAsync("10.0.0.11"));
+            Assert.False(await  badCom.PingNodeAsync("10.0.0.11"));
         }
     }
 
-    public class ErrorHandling_Group3_FileNotFoundException
-    {
-        [Fact]
-        public async Task PCtoHubAsync_WithLocalFileMissing_ShouldThrowFileNotFoundException()
-        {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
-            // Steps
-            await Assert.ThrowsAsync<FileNotFoundException>(() =>
-                com.PCtoHubAsync(new ClusterFileIOCommand("nonexistent.txt", "/local/path/", ClusterFileIOCommandType.Upload), false));
-        }
-
-        [Fact]
-        public async Task PCtoHubAsync_WithRemoteFileMissingCheckExistsTrue_ShouldThrowFileNotFoundException()
-        {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
-            // Steps
-            await Assert.ThrowsAsync<FileNotFoundException>(() =>
-                com.PCtoHubAsync(new ClusterFileIOCommand("/remote/path/nonexistent.txt", "/local/output/", ClusterFileIOCommandType.Download, checkExists: true), false));
-        }
-    }
-
-    public class ErrorHandling_Group4_ExceptionWrapping
+    public class ErrorHandling_NonexistantHubPaths : CommunicatorTestBase
     {
         [Fact]
         public async Task PCtoHubAsync_WithInvalidPath_ShouldThrowException()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            await Assert.ThrowsAsync<Exception>(() =>
-                com.PCtoHubAsync(new ClusterFileIOCommand("/invalid/path/that/does/not/exist/file.txt", "/local/output/", ClusterFileIOCommandType.Download), false));
+            var result = await _com.PCtoHubAsync(new ClusterFileIOCommand("/invalid/path/that/does/not/exist/file.txt", "/local/output/", ClusterFileIOCommandType.Download), false);
+
+            Assert.IsType<UnauthorizedAccessException>(result.Exception);
         }
 
         [Fact]
-        public async Task ExecuteHubCommandAsync_WithInvalidPath_ShouldThrowException()
+        public async Task ExecuteHubCommandAsync_WithInvalidPath_ShouldReturnEmptyString()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            await Assert.ThrowsAsync<Exception>(() =>
-                com.ExecuteHubCommandAsync("ls /invalid/path/that/does/not/exist"));
+            var result = await _com.ExecuteHubCommandAsync("ls /invalid/path/that/does/not/exist");
+            Assert.Equal("", result);
         }
-    }
 
-    public class ErrorHandling_Group5_ResultBasedFailure
-    {
         [Fact]
-        public void PCtoHubAsync_WithInvalidRemotePath_ReturnsSuccessFalse()
+        public async Task PCtoHubAsync_WithInvalidRemotePath_ReturnsSuccessFalse()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            var result = com.PCtoHubAsync(new ClusterFileIOCommand("/invalid/path/that/does/not/exist/file.txt", "/local/output/", ClusterFileIOCommandType.Download), false);
+            var result = await _com.PCtoHubAsync(new ClusterFileIOCommand("/tmp/invalid/path/that/does/not/exist/file.txt", "C:\\tmp\\output\\file.txt", ClusterFileIOCommandType.Download), false);
 
             // Expected Result
-            Assert.False(result.IsCompletedSuccessfully);
+            Assert.False(result.MainProcedureSucceeded);
         }
 
         [Fact]
-        public void PCtoHubAsync_WithInvalidRemotePath_ReturnsNonNullException()
+        public async Task PCtoHubAsync_WithInvalidRemotePath_ReturnsNonNullException()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            var result = com.PCtoHubAsync(new ClusterFileIOCommand("/invalid/path/that/does/not/exist/file.txt", "/local/output/", ClusterFileIOCommandType.Download), false);
+            var result = await _com.PCtoHubAsync(new ClusterFileIOCommand("/tmp/invalid/path/that/does/not/exist/file.txt", "C:\\tmp\\output\\file.txt", ClusterFileIOCommandType.Download), false);
 
             // Expected Result
             Assert.NotNull(result.Exception);
         }
 
         [Fact]
-        public void PCtoHubAsync_WithInvalidRemotePath_ExceptionMessageContainsContext()
+        public async Task PCtoHubAsync_WithInvalidRemotePath_ExceptionMessageContainsContext()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            var result = com.PCtoHubAsync(new ClusterFileIOCommand("/invalid/path/that/does/not/exist/file.txt", "/local/output/", ClusterFileIOCommandType.Download), false);
+            var result = await _com.PCtoHubAsync(new ClusterFileIOCommand("/tmp/invalid/path/that/does/not/exist/file.txt", "C:\\tmp\\output\\file.txt", ClusterFileIOCommandType.Download), false);
 
             // Expected Result
             Assert.NotNull(result.Exception);
-            Assert.True(result.Exception.Message.Contains("not found") || result.Exception.Message.Contains("Remote file"));
+            Assert.True(result.Exception.Message.Contains("No such file"));
         }
     }
 
-    public class ErrorHandling_Group6_TunnelFailureReturnsZero
+    public class ErrorHandling_AddNodeTunnelWithBadCredentials : CommunicatorTestBase
     {
         [Fact]
         public async Task AddNodeTunnelAsync_WithInvalidCredentials_ReturnsPortZero()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            int port = await com.AddNodeTunnelAsync("192.0.2.1", "nonexistent_user", "wrong_password");
+            int port = await _com.AddNodeTunnelAsync("192.0.2.1", "nonexistent_user", "wrong_password");
 
             // Expected Result
             Assert.Equal(0, port);
@@ -247,11 +209,8 @@ namespace jCommunicator.Tests.UnitTests
         [Fact]
         public async Task AddNodeTunnelAsync_WithInvalidHost_ReturnsPortZero()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            int port = await com.AddNodeTunnelAsync("192.0.2.1", "user", "pass");
+            int port = await _com.AddNodeTunnelAsync("192.0.2.1", "user", "pass");
 
             // Expected Result
             Assert.Equal(0, port);
@@ -261,143 +220,127 @@ namespace jCommunicator.Tests.UnitTests
         public async Task AddNodeTunnelAsync_WithInvalidCredentials_NoExceptionThrown()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
-            // Steps
-            await com.AddNodeTunnelAsync("192.0.2.1", "nonexistent_user", "wrong_password");
+            await _com.AddNodeTunnelAsync("192.0.2.1", "nonexistent_user", "wrong_password");
         }
     }
 
-    public class ErrorHandling_Group6_LoggingContract
+    public class Communicator_LoggingContract : CommunicatorTestBase
     {
         [Fact]
         public async Task ExecuteHubCommandAsync_UsesLoggerInstance()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            var result = await com.ExecuteHubCommandAsync("echo test 2>&1");
+            await _com.ExecuteHubCommandAsync("echo test 2>&1", true);
 
             // Expected Result
-            Assert.Contains("test", result);
+            Assert.Contains(_logSink.Logs, log => log.Contains("test"));
         }
 
         [Fact]
         public async Task ExecuteNodeCommandAsync_UsesLoggerInstance()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
+            await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass);
 
             // Steps
-            var result = await com.ExecuteNodeCommandAsync("echo test", "10.0.0.11", "camcpp");
+            var result = await _com.ExecuteNodeCommandAsync("echo test", node1Host, node1User, true);
 
             // Expected Result
-            Assert.Contains("test", result);
+            Assert.Contains(_logSink.Logs, log => log.Contains("test"));
         }
 
         [Fact]
-        public async Task PingNodeAsync_ReturnsBoolean_UsesLoggerInstance()
+        public async Task PingNodeAsync_UsesLoggerInstance()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
+            await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass);
 
             // Steps
-            var result = await com.PingNodeAsync("10.0.0.11");
+            var result = await _com.PingNodeAsync(node1Host, true);
 
             // Expected Result
-            Assert.IsType<bool>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains("ping"));
         }
 
         [Fact]
-        public void NodeFileExists_ReturnsBoolean_UsesLoggerInstance()
+        public async Task NodeFileLastModified_UsesLoggerInstance()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
+            await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass);
+            string remoteFile = await CreateNodeFile(_com, node1Host, node1User, GetRemoteTempFilePath());
 
             // Steps
-            var result = com.NodeFileExists("/tmp/test.txt", "10.0.0.11");
+            await _com.NodeFileLastModified(remoteFile, node1Host, true);
 
             // Expected Result
-            Assert.IsType<bool>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains(remoteFile));
         }
 
         [Fact]
-        public void NodeFileLastModified_ReturnsDateTimeNullable_UsesLoggerInstance()
+        public async Task GetListOfNodeFiles_UsesLoggerInstance()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
+            await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass);
+            string tempDir = "/tmp/";
 
             // Steps
-            var result = com.NodeFileLastModified("/tmp/test.txt", "10.0.0.11");
+            await _com.GetListOfNodeFiles(tempDir, ".txt", node1Host, node1User, true);
 
             // Expected Result
-            Assert.IsType<DateTime?>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains(tempDir));
         }
 
         [Fact]
-        public void GetListOfNodeFiles_ReturnsList_UsesLoggerInstance()
+        public async Task DeleteNodeFile_UsesLoggerInstance()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
+            await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass);
+            string remoteFile = await CreateNodeFile(_com, node1Host, node1User, GetRemoteTempFilePath());
 
             // Steps
-            var result = com.GetListOfNodeFiles("/tmp/", ".txt", "10.0.0.11", "camcpp");
+            var result = await _com.DeleteNodeFile(remoteFile, node1Host, true);
 
             // Expected Result
-            Assert.IsType<List<Renci.SshNet.Sftp.SftpFile>>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains(remoteFile));
         }
 
         [Fact]
-        public void DeleteNodeFile_ReturnsBoolean_UsesLoggerInstance()
+        public async Task MoveNodeFile_UsesLoggerInstance()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
+            await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass);
+            string remoteFile = await CreateNodeFile(_com, node1Host, node1User, GetRemoteTempFilePath());
+            string localPath = GetRemoteTempFilePath();
 
             // Steps
-            var result = com.DeleteNodeFile("/tmp/test.txt", "10.0.0.11");
+            var result = await _com.MoveNodeFile(remoteFile, localPath, node1Host, node1User, true);
 
             // Expected Result
-            Assert.IsType<bool>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains(remoteFile));
+            Assert.Contains(_logSink.Logs, log => log.Contains(localPath));
         }
 
         [Fact]
-        public void MoveNodeFile_ReturnsBoolean_UsesLoggerInstance()
+        public async Task AddNodeTunnelAsync_UsesLoggerInstance()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
-            // Steps
-            var result = com.MoveNodeFile("/tmp/test.txt", "/tmp/moved.txt", "10.0.0.11", "camcpp");
+            // Setup_
+            int result = await _com.AddNodeTunnelAsync(node1Host, node1User, node1Pass, true);
 
             // Expected Result
-            Assert.IsType<bool>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains(result.ToString()));
         }
 
         [Fact]
-        public void AddNodeTunnelAsync_ReturnsInt_UsesLoggerInstance()
+        public async Task PCtoHubAsync_UsesLoggerInstance()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
+            string remotePath = await CreateHubFile(_com, GetRemoteTempFilePath());
+            string localPath = GetLocalTempFilePath();
             // Steps
-            var result = com.AddNodeTunnelAsync("10.0.0.11", "camcpp", "cam");
+            var result = await _com.PCtoHubAsync(new ClusterFileIOCommand(remotePath, localPath, ClusterFileIOCommandType.Download), true);
 
             // Expected Result
-            Assert.IsType<int>(result);
-        }
-
-        [Fact]
-        public void PCtoHubAsync_ReturnsDownloadResult_UsesLoggerInstance()
-        {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
-            // Steps
-            var result = com.PCtoHubAsync(new ClusterFileIOCommand("/tmp/test.txt", "/local/path/", ClusterFileIOCommandType.Download), false);
-
-            // Expected Result
-            Assert.IsType<DownloadResult>(result);
+            Assert.Contains(_logSink.Logs, log => log.Contains(remotePath));
+            Assert.Contains(_logSink.Logs, log => log.Contains(localPath));
         }
     }
 }

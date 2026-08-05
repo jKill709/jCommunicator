@@ -158,23 +158,32 @@ namespace jCommunicator
             {
                 throw new ArgumentOutOfRangeException(nameof(remotePath), "Remote path cannot be empty.");
             }
-            if (localPath == null)
-            {
-                throw new ArgumentNullException(nameof(localPath), "Local path cannot be null.");
-            }
-            else if (string.IsNullOrWhiteSpace(localPath))
-            {
-                throw new ArgumentOutOfRangeException(nameof(localPath), "Local path cannot be empty.");
-            }
 
             RemoteFileName = Path.GetFileName(remotePath);
             RemoteDir = Path.GetDirectoryName(remotePath)!.Replace('\\', '/');
             LocalFileName = Path.GetFileName(localPath);
-            LocalDir = Path.GetDirectoryName(localPath)!;
+            LocalDir = Path.GetDirectoryName(localPath) ?? "";
 
         }
         private void SetPaths(string fileName, string remoteDir, string localDir)
         {
+            if (remoteDir == null)
+            {
+                throw new ArgumentNullException(nameof(remoteDir), "Remote path cannot be null.");
+            }
+            else if (string.IsNullOrWhiteSpace(remoteDir))
+            {
+                throw new ArgumentOutOfRangeException(nameof(remoteDir), "Remote path cannot be empty.");
+            }
+            if (fileName == null)
+            {
+                throw new ArgumentNullException(nameof(fileName), "Remote path cannot be null.");
+            }
+            else if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new ArgumentOutOfRangeException(nameof(fileName), "Remote path cannot be empty.");
+            }
+
             RemoteFileName = fileName;
             RemoteDir = remoteDir.Replace('\\', '/').TrimEnd('/');
             LocalFileName = fileName;

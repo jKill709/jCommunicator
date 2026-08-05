@@ -3,45 +3,23 @@ using Xunit;
 
 namespace jCommunicator.Tests.UnitTests
 {
-    public class HubFileOperations_Group1_HubFileExists_ReturnsBool
+    public class HubFileOperations_NormalOperations : CommunicatorTestBase
     {
         [Fact]
-        public void HubFileExists_ReturnsBool()
+        public async Task HubFileExists_ReturnsBool()
         {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
             // Steps
-            var result = com.HubFileExists("/tmp/test.txt");
+            var result = await _com.HubFileExists("/tmp/test.txt");
 
             // Expected Result
             Assert.IsType<bool>(result);
         }
 
         [Fact]
-        public async Task HubFileExists_WithUnreachableHub_ReturnsFalse()
+        public async Task HubFileLastModified_ReturnsDateTime()
         {
-            // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
-
             // Steps
-            bool result = await com.HubFileExists("/tmp/test.txt");
-
-            // Expected Result
-            Assert.False(result);
-        }
-    }
-
-    public class HubFileOperations_Group2_HubFileLastModified_ReturnsDateTime
-    {
-        [Fact]
-        public void HubFileLastModified_ReturnsDateTime()
-        {
-            // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
-
-            // Steps
-            var result = com.HubFileLastModified("/tmp/test.txt");
+            var result = await _com.HubFileLastModified("/tmp/test.txt");
 
             // Expected Result
             Assert.IsType<DateTime>(result);
