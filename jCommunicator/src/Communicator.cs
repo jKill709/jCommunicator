@@ -100,6 +100,10 @@ namespace jCommunicator
 
                 logger.Log(LogLevel.INFO, "Communicator", $"Connecting to Cluster Hub at {_username}@{_host}. Please wait...");
                 await _sshClient.ConnectAsync(sshToken);
+                if (!_sshClient.IsConnected)
+                {
+                    throw new InvalidOperationException("Failed to connect to SSH client.");
+                }
                 _sftpClient = new SftpClient(_host, _username, _password);
                 await _sftpClient.ConnectAsync(sftpToken);
                 await RebuildNodeTunnelsAsync();
@@ -219,6 +223,8 @@ namespace jCommunicator
                 throw new ArgumentNullException("nodeHost passed as null");
             if (nodeUsername == null || nodeUsername == "")
                 throw new ArgumentNullException("nodeUsername passed as null");
+            if (nodePassword == null)
+                throw new ArgumentNullException("nodePassword passed as null");
 
             if (!IsConnected)
             {

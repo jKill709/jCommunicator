@@ -3,139 +3,136 @@ using Xunit;
 
 namespace jCommunicator.Tests.UnitTests
 {
-    public class ErrorHandling_Group1_ArgumentNullException
+    public class ErrorHandling_Group1_ArgumentNullException : CommunicatorTestBase
     {
         [Fact]
         public async Task AddNodeTunnelAsync_WithNullHost_ShouldThrowArgumentNullException()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
 
             // Steps
-            await Assert.ThrowsAsync<ArgumentNullException>(() => com.AddNodeTunnelAsync(null, "user", "pass"));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _com.AddNodeTunnelAsync(null, "user", "pass"));
         }
 
         [Fact]
         public async Task AddNodeTunnelAsync_WithEmptyHost_ShouldThrowArgumentNullException()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
 
             // Steps
-            await Assert.ThrowsAsync<ArgumentNullException>(() => com.AddNodeTunnelAsync("", "user", "pass"));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _com.AddNodeTunnelAsync("", "user", "pass"));
         }
 
         [Fact]
         public async Task AddNodeTunnelAsync_WithNullUsername_ShouldThrowArgumentNullException()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
 
             // Steps
-            await Assert.ThrowsAsync<ArgumentNullException>(() => com.AddNodeTunnelAsync("10.0.0.11", null, "pass"));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _com.AddNodeTunnelAsync("10.0.0.11", null, "pass"));
         }
 
         [Fact]
         public async Task AddNodeTunnelAsync_WithNullPassword_ShouldThrowArgumentNullException()
         {
             // Setup
-            Communicator com = new Communicator("Hub1.local", "camcpp", "cam");
 
             // Steps
-            await Assert.ThrowsAsync<ArgumentNullException>(() => com.AddNodeTunnelAsync("10.0.0.11", "user", null));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _com.AddNodeTunnelAsync("10.0.0.11", "user", null));
         }
     }
 
-    public class ErrorHandling_Group2_InvalidOperationException
+    public class ErrorHandling_Group2_InvalidOperationException : CommunicatorTestBase
     {
         [Fact]
         public async Task AddNodeTunnelAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.ConnectAsync());
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.AddNodeTunnelAsync("10.0.0.11", "user", "pass"));
         }
 
         [Fact]
         public async Task ExecuteHubCommandAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.ExecuteHubCommandAsync("echo test"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.ExecuteHubCommandAsync("echo test"));
         }
 
         [Fact]
         public async Task ExecuteNodeCommandAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.ExecuteNodeCommandAsync("echo test", "10.0.0.11", "user"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.ExecuteNodeCommandAsync("echo test", "10.0.0.11", "user"));
         }
 
         [Fact]
         public async Task NodeFileExists_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.NodeFileExists("/path/to/file.txt", "10.0.0.11"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.NodeFileExists("/path/to/file.txt", "10.0.0.11"));
         }
 
         [Fact]
         public async Task NodeFileLastModified_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.NodeFileLastModified("/path/to/file.txt", "10.0.0.11"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.NodeFileLastModified("/path/to/file.txt", "10.0.0.11"));
         }
 
         [Fact]
         public async Task GetListOfNodeFiles_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.GetListOfNodeFiles("/path/to/", ".txt.", "192.0.2.1", "nonexistent"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.GetListOfNodeFiles("/path/to/", ".txt.", "192.0.2.1", "nonexistent"));
         }
 
         [Fact]
         public async Task DeleteNodeFile_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.DeleteNodeFile("/path/to/file.txt", "10.0.0.11"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.DeleteNodeFile("/path/to/file.txt", "10.0.0.11"));
         }
 
         [Fact]
         public async Task MoveNodeFile_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.MoveNodeFile("/path/to/file.txt", "/path/to/newname.txt", "192.0.2.1", "nonexistent"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.MoveNodeFile("/path/to/file.txt", "/path/to/newname.txt", "192.0.2.1", "nonexistent"));
         }
 
         [Fact]
         public async Task PingNodeAsync_WhenHubUnreachable_ShouldThrowInvalidOperationException()
         {
             // Setup
-            Communicator com = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
+            Communicator badCom = new Communicator("192.0.2.1", "nonexistent", "wrongpass");
 
             // Steps
-            await Assert.ThrowsAsync<InvalidOperationException>(() => com.PingNodeAsync("10.0.0.11"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => badCom.PingNodeAsync("10.0.0.11"));
         }
     }
 
