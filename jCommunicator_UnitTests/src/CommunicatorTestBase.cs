@@ -15,14 +15,14 @@ namespace jCommunicator.Tests
     {
         // --- Configuration ---
         protected const string hubHost = "Hub1.local";  // Change to your actual Hub IP
-        protected const string hubUser = "camcpp";      // Change to your actual Hub User
-        protected const string hubPass = "cam";         // Change to your actual Hub _hubPass
-        protected const string node1Host = "10.0.0.11"; // Change to your actual Hub IP
-        protected const string node1User = "camcpp";    // Change to your actual Hub User
-        protected const string node1Pass = "cam";       // Change to your actual Hub _hubPass
-        protected const string node2Host = "10.0.0.12"; // Change to your actual Hub IP
-        protected const string node2User = "camcpp";    // Change to your actual Hub User
-        protected const string node2Pass = "cam";       // Change to your actual Hub _hubPass
+        protected const string hubUser = "camcpp";      // Change to your actual Hub Username
+        protected const string hubPass = "cam";         // Change to your actual Hub Password
+        protected const string node1Host = "10.0.0.11"; // Change to your actual Node 1 IP
+        protected const string node1User = "camcpp";    // Change to your actual Node 1 Username
+        protected const string node1Pass = "cam";       // Change to your actual Node 1 Password
+        protected const string node2Host = "10.0.0.12"; // Change to your actual Node 2 IP
+        protected const string node2User = "camcpp";    // Change to your actual Node 2 Username
+        protected const string node2Pass = "cam";       // Change to your actual Node 2 Password
         protected const string remoteTempDirectory = "/tmp/";
         protected const string localTempDirectory = "C:\\Windows\\Temp\\";
 

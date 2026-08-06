@@ -104,9 +104,9 @@ namespace jCommunicator
                     throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported command type: {type}");
             }
         }
-        public ClusterFileIOCommand(string fileName, string remoteDir, string localDir, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool deleteAfter = false, bool checkSize = false)
+        public ClusterFileIOCommand(string remoteDir, string localDir, string fileName, ClusterFileIOCommandType type, bool checkExists = false, bool getAttributes = false, bool deleteAfter = false, bool checkSize = false)
         {
-            SetPaths(fileName, remoteDir, localDir);
+            SetPaths(remoteDir, localDir, fileName);
 
             this.Type = type;
             this.checkExists = checkExists;
@@ -137,9 +137,9 @@ namespace jCommunicator
             this.deleteAfter = other.deleteAfter;
             this.checkSize = other.checkSize;
         }
-        public ClusterFileIOCommand(string fileName, string remoteDir, string localDir, ClusterFileIOCommand other)
+        public ClusterFileIOCommand(string remoteDir, string localDir, string fileName, ClusterFileIOCommand other)
         {
-            SetPaths(fileName, remoteDir, localDir);
+            SetPaths(remoteDir, localDir, fileName);
 
             this.Type = other.Type;
             this.checkExists = other.checkExists;
@@ -165,7 +165,7 @@ namespace jCommunicator
             LocalDir = Path.GetDirectoryName(localPath) ?? "";
 
         }
-        private void SetPaths(string fileName, string remoteDir, string localDir)
+        private void SetPaths(string remoteDir, string localDir, string fileName)
         {
             if (remoteDir == null)
             {

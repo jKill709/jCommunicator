@@ -1,9 +1,10 @@
 using jCommunicator;
+using jCommunicator.Tests;
 using Xunit;
 
-namespace jCommunicator.Tests.UnitTests
+namespace jCommunicator.Tests.Integration
 {
-    public class ConnectionAndStatus_Group1_ConnectAsync : CommunicatorTestBase
+    public class ConnectionAndStatus_ConnectAsync : CommunicatorTestBase
     {
         [Fact]
         public async Task ConnectAsync_WithValidCredentials_ShouldReturnTrue()
@@ -43,7 +44,7 @@ namespace jCommunicator.Tests.UnitTests
         }
     }
 
-    public class ConnectionAndStatus_Group2_IsConnected : CommunicatorTestBase
+    public class ConnectionAndStatus_IsConnected : CommunicatorTestBase
     {
         [Fact]
         public void IsConnected_InitialState_ShouldBeFalse()
@@ -122,7 +123,7 @@ namespace jCommunicator.Tests.UnitTests
         }
     }
 
-    public class ConnectionAndStatus_Group3_CheckConnectionAsync : CommunicatorTestBase
+    public class ConnectionAndStatus_CheckConnectionAsync : CommunicatorTestBase
     {
         [Fact]
         public async Task CheckConnectionAsync_WhenAlreadyConnected_ShouldPassImmediately()

@@ -530,12 +530,13 @@ namespace jCommunicator
                 throw;
             }
         }
-        public async Task<DateTime> HubFileLastModified(string hubFilePath)
+        public async Task<DateTime> HubFileLastModified(string hubFilePath, bool verbose = false)
         {
             try
             {
                 DownloadResult result = new DownloadResult(new ClusterFileIOCommand(hubFilePath.Split().Last(), "", ClusterFileIOCommandType.Attributes, getAttributes: true));
-                await CheckExistsAsync(_sftpClient, result);
+                //await CheckExistsAsync(_sftpClient, result, verbose);
+                GetAttributes(_sftpClient, result, verbose);
                 return result.Attributes.LastWriteTime;
             }
             catch (FileNotFoundException ex)
@@ -656,7 +657,8 @@ namespace jCommunicator
             try
             {
                 DownloadResult result = new DownloadResult(new ClusterFileIOCommand(nodeFilePath.Split().Last(), "", ClusterFileIOCommandType.Attributes, getAttributes: true));
-                await CheckExistsAsync(_nodeConnections[host].Sftp, result, verbose);
+                //await CheckExistsAsync(_nodeConnections[host].Sftp, result, verbose);
+                GetAttributes(_nodeConnections[host].Sftp, result, verbose);
                 if (verbose)
                 {
                     logger.Log(LogLevel.INFO, "Communicator", $"File {nodeFilePath} on {host} last written to: {result.Attributes?.LastWriteTime}");

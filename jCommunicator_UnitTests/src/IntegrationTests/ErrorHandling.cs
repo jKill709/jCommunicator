@@ -1,7 +1,7 @@
 using jCommunicator;
 using Xunit;
 
-namespace jCommunicator.Tests.UnitTests
+namespace jCommunicator.Tests.Integration
 {
     public class ErrorHandling_WithBadConstructorArgs : CommunicatorTestBase
     {
